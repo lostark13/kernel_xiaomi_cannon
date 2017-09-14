@@ -1999,6 +1999,19 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
                                                portId);
 }
 
+uint32_t AudioPolicyManagerCustom::activeNonSoundTriggerInputsCountOnDevices(audio_devices_t devices) const
+{
+    uint32_t count = 0;
+    for (size_t i = 0; i < mInputs.size(); i++) {
+        const sp<AudioInputDescriptor>  inputDescriptor = mInputs.valueAt(i);
+        if (inputDescriptor->isActive() && !inputDescriptor->isSoundTrigger() &&
+                ((devices == AUDIO_DEVICE_IN_DEFAULT) ||
+                 ((inputDescriptor->mDevice & devices & ~AUDIO_DEVICE_BIT_IN) != 0))) {
+            count++;
+        }
+    }
+    return count;
+}
 
 status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                                         audio_session_t session,
@@ -2047,6 +2060,13 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
 
             if (is_virtual_input_device(activeDesc->mDevice)) {
                 continue;
+            }
+
+            if (property_get_bool("persist.vendor.audio.va_concurrency_enabled", false)) {
+                // Don't allow sound triggers streams to preempt one another.
+                if (inputDesc->isSoundTrigger() && activeDesc->isSoundTrigger()) {
+                    continue;
+                }
             }
 
             audio_source_t activeSource = activeDesc->inputSource(true);
@@ -2164,9 +2184,12 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
             }
 
             audio_devices_t primaryInputDevices = availablePrimaryInputDevices();
-            if (((device & primaryInputDevices & ~AUDIO_DEVICE_BIT_IN) != 0) &&
-                    mInputs.activeInputsCountOnDevices(primaryInputDevices) == 1) {
-                SoundTrigger::setCaptureState(true);
+            if ((device & primaryInputDevices & ~AUDIO_DEVICE_BIT_IN) != 0) {
+                if (property_get_bool("persist.vendor.audio.va_concurrency_enabled", false)) {
+                    if (activeNonSoundTriggerInputsCountOnDevices(primaryInputDevices) == 1)
+                        SoundTrigger::setCaptureState(true);
+                } else if (mInputs.activeInputsCountOnDevices(primaryInputDevices) == 1)
+                    SoundTrigger::setCaptureState(true);
             }
 
             // automatically enable the remote submix output when input is started if not
@@ -2200,6 +2223,16 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
 {
     status_t status;
     status = AudioPolicyManager::stopInput(input, session);
+    if (property_get_bool("persist.vendor.audio.va_concurrency_enabled", false)) {
+        ssize_t index = mInputs.indexOfKey(input);
+        sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(index);
+        audio_devices_t device = inputDesc->mDevice;
+        audio_devices_t primaryInputDevices = availablePrimaryInputDevices();
+        if (((device & primaryInputDevices & ~AUDIO_DEVICE_BIT_IN) != 0) &&
+                activeNonSoundTriggerInputsCountOnDevices(primaryInputDevices) == 0) {
+                SoundTrigger::setCaptureState(false);
+        }
+    }
 #ifdef RECORD_PLAY_CONCURRENCY
     char propValue[PROPERTY_VALUE_MAX];
     bool prop_rec_play_enabled = false;

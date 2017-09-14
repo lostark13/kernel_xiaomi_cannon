@@ -101,6 +101,10 @@ public:
                                          audio_port_handle_t selectedDeviceId,
                                          input_type_t *inputType,
                                          audio_port_handle_t *portId);
+        /* count active capture sessions (that are not sound trigger) using one of
+           the specified devices. Ignore devices if AUDIO_DEVICE_IN_DEFAULT is passed */
+        uint32_t activeNonSoundTriggerInputsCountOnDevices(
+            audio_devices_t devices = AUDIO_DEVICE_IN_DEFAULT) const;
         // indicates to the audio policy manager that the input starts being used.
         virtual status_t startInput(audio_io_handle_t input,
                                     audio_session_t session,

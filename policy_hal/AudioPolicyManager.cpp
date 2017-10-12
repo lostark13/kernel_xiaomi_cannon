@@ -1415,6 +1415,11 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
     audio_io_handle_t output = AUDIO_IO_HANDLE_NONE;
     status_t status;
 
+    if (stream < AUDIO_STREAM_MIN || stream >= AUDIO_STREAM_CNT) {
+        ALOGE("%s: invalid stream %d", __func__, stream);
+        return AUDIO_IO_HANDLE_NONE;
+    }
+
 #ifdef AUDIO_POLICY_TEST
     if (mCurOutput != 0) {
         ALOGV("getOutput() test output mCurOutput %d, samplingRate %d, format %d, channelMask %x, mDirectOutput %d",

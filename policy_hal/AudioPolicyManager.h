@@ -185,6 +185,9 @@ private:
                 audio_output_flags_t flags,
                 audio_port_handle_t selectedDeviceId,
                 audio_port_handle_t *portId);
+        // internal method to query hal for whether display-port is connected
+        // and can be used for voip/voice call
+        void chkDpConnAndAllowedForVoice();
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
 #ifdef VOICE_CONCURRENCY

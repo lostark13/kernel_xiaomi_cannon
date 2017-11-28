@@ -187,6 +187,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             }
             // Propagate device availability to Engine
             mEngine->setDeviceConnectionState(devDesc, state);
+            if (device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+                chkDpConnAndAllowedForVoice();
+            }
 
             // outputs should never be empty here
             ALOG_ASSERT(outputs.size() != 0, "setDeviceConnectionState():"
@@ -231,6 +234,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
             // Propagate device availability to Engine
             mEngine->setDeviceConnectionState(devDesc, state);
+            if (device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+                mEngine->setDpConnAndAllowedForVoice(false);
+            }
             } break;
 
         default:
@@ -393,6 +399,20 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
     ALOGW("setDeviceConnectionState() invalid device: %x", device);
     return BAD_VALUE;
+}
+
+void AudioPolicyManagerCustom::chkDpConnAndAllowedForVoice()
+{
+    String8 value;
+    bool connAndAllowed = false;
+    String8 valueStr = mpClientInterface->getParameters((audio_io_handle_t)0,
+                                                        String8("dp_for_voice"));
+
+    AudioParameter result = AudioParameter(valueStr);
+    if (result.get(String8("dp_for_voice"), value) == NO_ERROR) {
+        connAndAllowed = value.contains("true");
+    }
+    mEngine->setDpConnAndAllowedForVoice(connAndAllowed);
 }
 
 bool AudioPolicyManagerCustom::isInvalidationOfMusicStreamNeeded(routing_strategy strategy)

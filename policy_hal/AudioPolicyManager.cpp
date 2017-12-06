@@ -1537,11 +1537,25 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
             }
         }
 #else
-    if (stream == AUDIO_STREAM_VOICE_CALL &&
+    if (mEngine->getPhoneState() == AUDIO_MODE_IN_COMMUNICATION &&
+        stream == AUDIO_STREAM_VOICE_CALL &&
         audio_is_linear_pcm(format)) {
-        flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_VOIP_RX |
-                                       AUDIO_OUTPUT_FLAG_DIRECT);
-        ALOGV("Set VoIP and Direct output flags for PCM format");
+        //check if VoIP output is not opened already
+        bool voip_pcm_already_in_use = false;
+        for (size_t i = 0; i < mOutputs.size(); i++) {
+             sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+             if (desc->mFlags == (AUDIO_OUTPUT_FLAG_VOIP_RX | AUDIO_OUTPUT_FLAG_DIRECT)) {
+                 voip_pcm_already_in_use = true;
+                 ALOGD("VoIP PCM already in use");
+                 break;
+             }
+        }
+
+        if (!voip_pcm_already_in_use) {
+            flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_VOIP_RX |
+                                           AUDIO_OUTPUT_FLAG_DIRECT);
+            ALOGV("Set VoIP and Direct output flags for PCM format");
+        }
 #endif
         //IF VOIP is going to be started at the same time as when
         //vr is enabled, get VOIP to fallback to low latency

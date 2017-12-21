@@ -98,7 +98,11 @@ public:
                                          uid_t uid,
                                          const audio_config_base_t *config,
                                          audio_input_flags_t flags,
+#ifdef O_MR1
+                                         audio_port_handle_t *selectedDeviceId,
+#else
                                          audio_port_handle_t selectedDeviceId,
+#endif
                                          input_type_t *inputType,
                                          audio_port_handle_t *portId);
         /* count active capture sessions (that are not sound trigger) using one of
@@ -183,7 +187,11 @@ private:
                 uid_t uid,
                 const audio_config_t *config,
                 audio_output_flags_t flags,
+#ifdef O_MR1
+                audio_port_handle_t *selectedDeviceId,
+#else
                 audio_port_handle_t selectedDeviceId,
+#endif
                 audio_port_handle_t *portId);
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;

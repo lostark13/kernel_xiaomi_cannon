@@ -30,6 +30,10 @@ LOCAL_STATIC_LIBRARIES := \
 
 LOCAL_CFLAGS += -Wall -Werror
 
+ifeq ($(call is-platform-sdk-version-at-least,27),true) # 27 denotes O-MR1
+LOCAL_CFLAGS += -DO_MR1
+endif
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_VOICE_CONCURRENCY)),true)
 LOCAL_CFLAGS += -DVOICE_CONCURRENCY
 endif

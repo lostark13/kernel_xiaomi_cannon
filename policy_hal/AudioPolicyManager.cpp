@@ -1392,7 +1392,11 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
                                                     uid_t uid,
                                                     const audio_config_t *config,
                                                     audio_output_flags_t flags,
+#ifdef O_MR1
+                                                    audio_port_handle_t *selectedDeviceId,
+#else
                                                     audio_port_handle_t selectedDeviceId,
+#endif
                                                     audio_port_handle_t *portId)
 {
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
@@ -1418,7 +1422,12 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
 
     return AudioPolicyManager::getOutputForAttr(attr, output, session, stream,
                                                 (uid_t)uid, &tConfig,
-                                                flags, (audio_port_handle_t)selectedDeviceId,
+                                                flags,
+#ifdef O_MR1
+                                                (audio_port_handle_t*)selectedDeviceId,
+#else
+                                                (audio_port_handle_t)selectedDeviceId,
+#endif
                                                 portId);
 }
 
@@ -1962,7 +1971,11 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
                                          uid_t uid,
                                          const audio_config_base_t *config,
                                          audio_input_flags_t flags,
+#ifdef O_MR1
+                                         audio_port_handle_t *selectedDeviceId,
+#else
                                          audio_port_handle_t selectedDeviceId,
+#endif
                                          input_type_t *inputType,
                                          audio_port_handle_t *portId)
 {

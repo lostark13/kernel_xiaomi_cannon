@@ -1515,9 +1515,9 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
             int value = 0;
             uint32_t voipOutCount = 1, voipSampleRate = 1;
 
-            valueStr = mpClientInterface->getParameters((audio_io_handle_t)0,
+            String8 valueStr = mpClientInterface->getParameters((audio_io_handle_t)0,
                                               String8("voip_out_stream_count"));
-            result = AudioParameter(valueStr);
+            AudioParameter result = AudioParameter(valueStr);
             if (result.getInt(String8("voip_out_stream_count"), value) == NO_ERROR) {
                 voipOutCount = value;
             }

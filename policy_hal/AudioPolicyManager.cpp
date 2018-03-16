@@ -1427,10 +1427,11 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         audio_devices_t device,
         audio_session_t session,
         audio_stream_type_t stream,
+        audio_io_handle_t originalOutput,
         const audio_config_t *config,
         audio_output_flags_t *flags)
 {
-    audio_io_handle_t output = AUDIO_IO_HANDLE_NONE;
+    audio_io_handle_t output = originalOutput;
     status_t status;
 
     if (stream < AUDIO_STREAM_MIN || stream >= AUDIO_STREAM_CNT) {
@@ -1770,29 +1771,30 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
             goto non_direct_output;
         }
 
-
-        // if multiple concurrent offload decode is supported
-        // do no check for reuse and also don't close previous output if its offload
-        // previous output will be closed during track destruction
-        if (!(property_get_bool("vendor.audio.offload.multiple.enabled", false) &&
+        if ((*flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) == 0 || output != AUDIO_IO_HANDLE_NONE) {
+            // if multiple concurrent offload decode is supported
+            // do no check for reuse and also don't close previous output if its offload
+            // previous output will be closed during track destruction
+            if (!(property_get_bool("vendor.audio.offload.multiple.enabled", false) &&
                 ((*flags & AUDIO_OUTPUT_FLAG_DIRECT) != 0))) {
-        for (size_t i = 0; i < mOutputs.size(); i++) {
-            sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
-            if (!desc->isDuplicated() && (profile == desc->mProfile)) {
-                // reuse direct output if currently open by the same client
-                // and configured with same parameters
-                if ((config->sample_rate == desc->mSamplingRate) &&
-                    audio_formats_match(config->format, desc->mFormat) &&
-                    (config->channel_mask == desc->mChannelMask) &&
-                    (session == desc->mDirectClientSession)) {
-                    desc->mDirectOpenCount++;
-                    ALOGV("getOutputForDevice() reusing direct output %d for session %d",
-                        mOutputs.keyAt(i), session);
-                    return mOutputs.keyAt(i);
+                for (size_t i = 0; i < mOutputs.size(); i++) {
+                   sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+                   if (!desc->isDuplicated() && (profile == desc->mProfile)) {
+                        // reuse direct output if currently open by the same client
+                        // and configured with same parameters
+                        if ((config->sample_rate == desc->mSamplingRate) &&
+                            audio_formats_match(config->format, desc->mFormat) &&
+                            (config->channel_mask == desc->mChannelMask) &&
+                            (session == desc->mDirectClientSession)) {
+                            desc->mDirectOpenCount++;
+                            ALOGV("getOutputForDevice() reusing direct output %d for session %d",
+                                   mOutputs.keyAt(i), session);
+                           return mOutputs.keyAt(i);
+                        }
+                    }
                 }
             }
-       }
-       }
+        }
 #if 0 // TODO: Handle direct PCM fallback case
                 if (*flags == AUDIO_OUTPUT_FLAG_DIRECT &&
                     direct_pcm_already_in_use == true &&
@@ -1851,7 +1853,7 @@ non_direct_output:
 
     // A request for HW A/V sync cannot fallback to a mixed output because time
     // stamps are embedded in audio data
-    if ((*flags & AUDIO_OUTPUT_FLAG_HW_AV_SYNC) != 0) {
+    if ((*flags & (AUDIO_OUTPUT_FLAG_HW_AV_SYNC | AUDIO_OUTPUT_FLAG_MMAP_NOIRQ)) != 0) {
         return AUDIO_IO_HANDLE_NONE;
     }
 

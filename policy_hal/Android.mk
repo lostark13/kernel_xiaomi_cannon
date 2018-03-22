@@ -14,8 +14,9 @@ LOCAL_C_INCLUDES := $(TOPDIR)frameworks/av/services \
                     $(TOPDIR)frameworks/av/services/audiopolicy \
                     $(TOPDIR)frameworks/av/services/audiopolicy/common/managerdefinitions/include \
                     $(call include-path-for, avextension) \
-                    $(TOPDIR)system/core/base/include
 
+LOCAL_HEADER_LIBRARIES := \
+        libbase_headers
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \

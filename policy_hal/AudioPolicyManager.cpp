@@ -2286,6 +2286,7 @@ void AudioPolicyManagerCustom::closeAllInputs() {
             patchRemoved = true;
         }
         mpClientInterface->closeInput(mInputs.keyAt(input_index-1));
+        inputDesc->close();
     }
     mInputs.clear();
     SoundTrigger::setCaptureState(false);

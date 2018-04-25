@@ -2273,30 +2273,6 @@ status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
     return status;
 }
 
-void AudioPolicyManagerCustom::closeAllInputs() {
-    bool patchRemoved = false;
-
-    for(size_t input_index = mInputs.size(); input_index > 0; input_index--) {
-        sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(input_index-1);
-        ssize_t patch_index = mAudioPatches.indexOfKey(inputDesc->getPatchHandle());
-        if (patch_index >= 0) {
-            sp<AudioPatch> patchDesc = mAudioPatches.valueAt(patch_index);
-            (void) /*status_t status*/ mpClientInterface->releaseAudioPatch(patchDesc->mAfPatchHandle, 0);
-            mAudioPatches.removeItemsAt(patch_index);
-            patchRemoved = true;
-        }
-        mpClientInterface->closeInput(mInputs.keyAt(input_index-1));
-        inputDesc->close();
-    }
-    mInputs.clear();
-    SoundTrigger::setCaptureState(false);
-    nextAudioPortGeneration();
-
-    if (patchRemoved) {
-        mpClientInterface->onAudioPatchListUpdate();
-    }
-}
-
 AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *clientInterface)
     : AudioPolicyManager(clientInterface),
       mHdmiAudioDisabled(false),

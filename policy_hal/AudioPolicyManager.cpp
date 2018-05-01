@@ -2173,7 +2173,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
     // Routing?
     mInputRoutes.incRouteActivity(session);
 
-    if (audioSession->activeCount() == 1 || mInputRoutes.hasRouteChanged(session)) {
+    if (audioSession->activeCount() == 1 || mInputRoutes.getAndClearRouteChanged(session)) {
         // indicate active capture to sound trigger service if starting capture from a mic on
         // primary HW module
         audio_devices_t device = getNewInputDevice(inputDesc);

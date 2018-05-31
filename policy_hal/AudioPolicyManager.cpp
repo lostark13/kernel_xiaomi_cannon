@@ -269,6 +269,19 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
         if (device == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
            audio_devices_t newDevice = AUDIO_DEVICE_NONE;
            if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
+               /*
+                 when mPrimaryOutput->start() is called for FM it would check if isActive() is true
+                 or not as mRefCount=0 so isActive() would return false and curActiveCount will be
+                 1 and then the mRefCount will be increased by 1 for FM case.Updating curActiveCount
+                 is important as in case of adding other tracks when FM is still active isActive()
+                 will always be true as mRefCount will always be > 0,Hence curActiveCount will never
+                 update for them. However ,when fm stops and the track stops too mRefCount will be 0
+                 isActive will false,it will check if curActiveCount < 1 as curActiveCount was never
+                 updated so LOG_FATAL will cause the AudioServer to die.Hence this start() call will
+                 ensure that curActiveCount is updated at least once when FM starts prior to other
+                 tracks and on calling of stop() LOG_FATAL is not called.
+               */
+               mPrimaryOutput->start();
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, 1);
                newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false)|AUDIO_DEVICE_OUT_FM);
                mFMIsActive = true;
@@ -277,6 +290,14 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false));
                mFMIsActive = false;
                mPrimaryOutput->changeRefCount(AUDIO_STREAM_MUSIC, -1);
+               /*
+                 mPrimaryOutput->stop() is called as because of calling of start()
+                 in FM case curActiveCount is getting updated and hence stop() is
+                 called so that curActiveCount gets decremented and if any tracks
+                 are added after FM stops they may get curActiveCount=0 ,ouptput
+                 curActiveCount can be properly updated
+               */
+               mPrimaryOutput->stop();
            }
            AudioParameter param = AudioParameter();
            param.addInt(String8("handle_fm"), (int)newDevice);

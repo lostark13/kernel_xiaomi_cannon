@@ -682,16 +682,8 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
         return;
     }
     /// Opens: can these line be executed after the switch of volume curves???
-    // if leaving call state, handle special case of active streams
-    // pertaining to sonification strategy see handleIncallSonification()
     if (isStateInCall(oldState)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
-        for (size_t j = 0; j < mOutputs.size(); j++) {
-            audio_io_handle_t curOutput = mOutputs.keyAt(j);
-            for (int stream = 0; stream < AUDIO_STREAM_FOR_POLICY_CNT; stream++) {
-                handleIncallSonification((audio_stream_type_t)stream, false, true, curOutput);
-            }
-        }
 
         // force reevaluating accessibility routing when call stops
         mpClientInterface->invalidateStream(AUDIO_STREAM_ACCESSIBILITY);
@@ -987,16 +979,8 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
             setOutputDevice(mOutputs.valueFor(output), newDevice, (newDevice != AUDIO_DEVICE_NONE));
         }
     }
-    // if entering in call state, handle special case of active streams
-    // pertaining to sonification strategy see handleIncallSonification()
     if (isStateInCall(state)) {
         ALOGV("setPhoneState() in call state management: new state is %d", state);
-        for (size_t j = 0; j < mOutputs.size(); j++) {
-            audio_io_handle_t curOutput = mOutputs.keyAt(j);
-            for (int stream = 0; stream < AUDIO_STREAM_FOR_POLICY_CNT; stream++) {
-                handleIncallSonification((audio_stream_type_t)stream, true, true, curOutput);
-           }
-        }
 
        // force reevaluating accessibility routing when call starts
        mpClientInterface->invalidateStream(AUDIO_STREAM_ACCESSIBILITY);
@@ -1097,15 +1081,6 @@ status_t AudioPolicyManagerCustom::stopSource(const sp<AudioOutputDescriptor>& o
     }
     // always handle stream stop, check which stream type is stopping
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
-
-    // handle special case for sonification while in call
-    if (isInCall()) {
-        if (outputDesc->isDuplicated()) {
-            handleIncallSonification(stream, false, false, outputDesc->subOutput1()->mIoHandle);
-            handleIncallSonification(stream, false, false, outputDesc->subOutput2()->mIoHandle);
-        }
-        handleIncallSonification(stream, false, false, outputDesc->mIoHandle);
-    }
 
     if (outputDesc->mRefCount[stream] > 0) {
         // decrement usage count of this stream on the output
@@ -1242,11 +1217,6 @@ status_t AudioPolicyManagerCustom::startSource(const sp<AudioOutputDescriptor>& 
         }
         uint32_t muteWaitMs = setOutputDevice(outputDesc, device, force, 0, NULL, address);
 
-        // handle special case for sonification while in call
-        if (isInCall()) {
-            handleIncallSonification(stream, true, false, outputDesc->mIoHandle);
-        }
-
         // apply volume rules for current stream and device if necessary
         checkAndSetVolume(stream,
                           mVolumeCurves->getVolumeIndex(stream, device),
@@ -1265,66 +1235,8 @@ status_t AudioPolicyManagerCustom::startSource(const sp<AudioOutputDescriptor>& 
             *delayMs = waitMs - muteWaitMs;
         }
 
-    } else {
-        // handle special case for sonification while in call
-        if (isInCall()) {
-            handleIncallSonification(stream, true, false, outputDesc->mIoHandle);
-        }
     }
     return NO_ERROR;
-}
-
-void AudioPolicyManagerCustom::handleIncallSonification(audio_stream_type_t stream,
-                                                      bool starting, bool stateChange,
-                                                      audio_io_handle_t output)
-{
-    if(!hasPrimaryOutput()) {
-        return;
-    }
-    // no action needed for AUDIO_STREAM_PATCH stream type, it's for internal flinger tracks
-    if (stream == AUDIO_STREAM_PATCH) {
-        return;
-    }
-    // if the stream pertains to sonification strategy and we are in call we must
-    // mute the stream if it is low visibility. If it is high visibility, we must play a tone
-    // in the device used for phone strategy and play the tone if the selected device does not
-    // interfere with the device used for phone strategy
-    // if stateChange is true, we are called from setPhoneState() and we must mute or unmute as
-    // many times as there are active tracks on the output
-    const routing_strategy stream_strategy = getStrategy(stream);
-    if ((stream_strategy == STRATEGY_SONIFICATION) ||
-            ((stream_strategy == STRATEGY_SONIFICATION_RESPECTFUL))) {
-        sp<SwAudioOutputDescriptor> outputDesc = mOutputs.valueFor(output);
-        ALOGV("handleIncallSonification() stream %d starting %d device %x stateChange %d",
-                stream, starting, outputDesc->mDevice, stateChange);
-        if (outputDesc->mRefCount[stream]) {
-            int muteCount = 1;
-            if (stateChange) {
-                muteCount = outputDesc->mRefCount[stream];
-            }
-            if (audio_is_low_visibility(stream)) {
-                ALOGV("handleIncallSonification() low visibility, muteCount %d", muteCount);
-                for (int i = 0; i < muteCount; i++) {
-                    setStreamMute(stream, starting, outputDesc);
-                }
-            } else {
-                ALOGV("handleIncallSonification() high visibility");
-                if (outputDesc->device() &
-                        getDeviceForStrategy(STRATEGY_PHONE, true /*fromCache*/)) {
-                    ALOGV("handleIncallSonification() high visibility muted, muteCount %d", muteCount);
-                    for (int i = 0; i < muteCount; i++) {
-                        setStreamMute(stream, starting, outputDesc);
-                    }
-                }
-                if (starting) {
-                    mpClientInterface->startTone(AUDIO_POLICY_TONE_IN_CALL_NOTIFICATION,
-                                                 AUDIO_STREAM_VOICE_CALL);
-                } else {
-                    mpClientInterface->stopTone();
-                }
-            }
-        }
-    }
 }
 
 void AudioPolicyManagerCustom::handleNotificationRoutingForStream(audio_stream_type_t stream) {

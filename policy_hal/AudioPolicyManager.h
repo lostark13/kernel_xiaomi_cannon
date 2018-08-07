@@ -153,9 +153,6 @@ protected:
 #endif /*VOICE_CONCURRENCY*/
         void moveGlobalEffect();
 
-        // handle special cases for sonification strategy while in call: mute streams or replace by
-        // a special tone in the device used for communication
-        void handleIncallSonification(audio_stream_type_t stream, bool starting, bool stateChange, audio_io_handle_t output);
         //parameter indicates of HDMI speakers disabled
         bool mHdmiAudioDisabled;
         //parameter indicates if HDMI plug in/out detected

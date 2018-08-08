@@ -1774,7 +1774,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
 
             outputDesc =
                     new SwAudioOutputDescriptor(profile, mpClientInterface);
-            DeviceVector outputDevices = mAvailableOutputDevices.getDevicesFromType(device);
+            DeviceVector outputDevices = mAvailableOutputDevices.getDevicesFromTypeMask(device);
             String8 address = outputDevices.size() > 0 ? outputDevices.itemAt(0)->mAddress
                     : String8("");
             status = outputDesc->open(config, device, address, stream, *flags, &output);

@@ -1537,8 +1537,14 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevice(
         for (size_t i = 0; i < mOutputs.size(); i++) {
              sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
              if (desc->mFlags == (AUDIO_OUTPUT_FLAG_VOIP_RX | AUDIO_OUTPUT_FLAG_DIRECT)) {
-                 voip_pcm_already_in_use = true;
-                 ALOGD("VoIP PCM already in use");
+                 //close voip output if currently open by the same client with different device
+                 if (desc->mDirectClientSession == session &&
+                     desc->device() != device) {
+                     closeOutput(desc->mIoHandle);
+                 } else {
+                     voip_pcm_already_in_use = true;
+                     ALOGD("VoIP PCM already in use");
+                 }
                  break;
              }
         }

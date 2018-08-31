@@ -486,7 +486,7 @@ void AudioPolicyManagerCustom::checkOutputForStrategy(routing_strategy strategy)
         }
     }
 
-    if (!vectorsEqual(srcOutputs,dstOutputs) && isInvalidationOfMusicStreamNeeded(strategy)) {
+    if ((srcOutputs != dstOutputs) && isInvalidationOfMusicStreamNeeded(strategy)) {
         AudioPolicyManager::checkOutputForStrategy(strategy);
     }
 }
@@ -1950,21 +1950,22 @@ uint32_t AudioPolicyManagerCustom::activeNonSoundTriggerInputsCountOnDevices(aud
     return count;
 }
 
-status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
-                                        audio_session_t session,
+status_t AudioPolicyManagerCustom::startInput(audio_port_handle_t portId,
                                         bool silenced,
                                         concurrency_type__mask_t *concurrency)
 {
 
-    ALOGV("startInput(input:%d, session:%d, silenced:%d, concurrency:%d)",
-            input, session, silenced, *concurrency);
+    ALOGV("startInput(portId:%d, silenced:%d, concurrency:%d)",
+            portId, silenced, *concurrency);
     *concurrency = API_INPUT_CONCURRENCY_NONE;
-    ssize_t index = mInputs.indexOfKey(input);
-    if (index < 0) {
-        ALOGW("startInput() unknown input %d", input);
+    sp<AudioInputDescriptor> inputDesc = mInputs.getInputForClient(portId);
+    if (inputDesc == 0) {
+        ALOGW("startInput() no input for client %d", portId);
         return BAD_VALUE;
     }
-    sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(index);
+    sp<RecordClientDescriptor> client = inputDesc->clients()[portId];
+    audio_session_t session = client->session();
+    audio_io_handle_t input = inputDesc->mIoHandle;
 
     sp<AudioSession> audioSession = inputDesc->getAudioSession(session);
     if (audioSession == 0) {
@@ -2012,9 +2013,8 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                 sp<AudioSession> activeSession = activeSessions.valueAt(0);
                 if (activeSession->isSilenced()) {
                     audio_io_handle_t activeInput = activeDesc->mIoHandle;
-                    audio_session_t activeSessionId = activeSession->session();
-                    stopInput(activeInput, activeSessionId);
-                    releaseInput(activeInput, activeSessionId);
+                    stopInput(activeInput);
+                    releaseInput(portId);
                     ALOGV("startInput(%d) stopping silenced input %d", input, activeInput);
                     activeInputs = mInputs.getActiveInputs();
                 }
@@ -2074,8 +2074,8 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
                 SortedVector<audio_session_t> sessions = activeDesc->getPreemptedSessions();
                 sessions.add(activeSession);
                 inputDesc->setPreemptedSessions(sessions);
-                stopInput(activeHandle, activeSession);
-                releaseInput(activeHandle, activeSession);
+                stopInput(activeHandle);
+                releaseInput(activeHandle);
                 ALOGV("startInput(%d) for HOTWORD preempting HOTWORD input %d",
                       input, activeDesc->mIoHandle);
             }
@@ -2189,11 +2189,10 @@ status_t AudioPolicyManagerCustom::startInput(audio_io_handle_t input,
     return NO_ERROR;
 }
 
-status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input,
-                                       audio_session_t session)
+status_t AudioPolicyManagerCustom::stopInput(audio_io_handle_t input)
 {
     status_t status;
-    status = AudioPolicyManager::stopInput(input, session);
+    status = AudioPolicyManager::stopInput(input);
     if (property_get_bool("persist.vendor.audio.va_concurrency_enabled", false)) {
         ssize_t index = mInputs.indexOfKey(input);
         sp<AudioInputDescriptor> inputDesc = mInputs.valueAt(index);

@@ -1070,6 +1070,12 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
     Vector<sp <AudioInputDescriptor> > activeInputs = mInputs.getActiveInputs();
     for (size_t i = 0; i <  activeInputs.size(); i++) {
         sp<AudioInputDescriptor> activeDesc = activeInputs[i];
+        // Skip for hotword recording as the input device switch
+        // is handled within sound trigger HAL
+        if (activeDesc->isSoundTrigger() &&
+            activeDesc->inputSource(true) == AUDIO_SOURCE_HOTWORD) {
+            continue;
+        }
         audio_devices_t newDevice = getNewInputDevice(activeDesc);
         // Force new input selection if the new device can not be reached via current input
         if (activeDesc->mProfile->getSupportedDevices().types() &

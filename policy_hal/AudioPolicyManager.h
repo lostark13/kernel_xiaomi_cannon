@@ -132,14 +132,11 @@ protected:
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.
-        status_t startSource(const sp<AudioOutputDescriptor>& outputDesc,
-                             audio_stream_type_t stream,
-                             audio_devices_t device,
-                             const char *address,
+        status_t startSource(const sp<SwAudioOutputDescriptor>& outputDesc,
+                             const sp<TrackClientDescriptor>& client,
                              uint32_t *delayMs);
-         status_t stopSource(const sp<AudioOutputDescriptor>& outputDesc,
-                            audio_stream_type_t stream,
-                            bool forceDeviceUpdate);
+        status_t stopSource(const sp<SwAudioOutputDescriptor>& outputDesc,
+                            const sp<TrackClientDescriptor>& client);
         // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON
         // returns 0 if no mute/unmute event happened, the largest latency of the device where
         //   the mute/unmute happened

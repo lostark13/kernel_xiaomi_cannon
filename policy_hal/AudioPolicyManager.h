@@ -106,9 +106,7 @@ public:
         uint32_t activeNonSoundTriggerInputsCountOnDevices(
             audio_devices_t devices = AUDIO_DEVICE_IN_DEFAULT) const;
         // indicates to the audio policy manager that the input starts being used.
-        virtual status_t startInput(audio_port_handle_t portId,
-                                    bool silenced,
-                                    concurrency_type__mask_t *concurrency);
+        virtual status_t startInput(audio_port_handle_t portId);
         // indicates to the audio policy manager that the input stops being used.
         virtual status_t stopInput(audio_port_handle_t portId);
 

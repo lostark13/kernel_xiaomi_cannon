@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -21,6 +21,7 @@
 #include <audiopolicy/managerdefault/AudioPolicyManager.h>
 #include <audio_policy_conf.h>
 #include <Volume.h>
+#include "APMConfigHelper.h"
 
 
 namespace android {
@@ -110,6 +111,8 @@ public:
         // indicates to the audio policy manager that the input stops being used.
         virtual status_t stopInput(audio_port_handle_t portId);
 
+        static sp<APMConfigHelper> mApmConfigs;
+
 protected:
 
          status_t checkAndSetVolume(audio_stream_type_t stream,
@@ -140,10 +143,8 @@ protected:
         //   the mute/unmute happened
         uint32_t handleEventForBeacon(int){return 0;}
         uint32_t setBeaconMute(bool){return 0;}
-#ifdef VOICE_CONCURRENCY
         static audio_output_flags_t getFallBackPath();
         int mFallBackflag;
-#endif /*VOICE_CONCURRENCY*/
         void moveGlobalEffect();
 
         //parameter indicates of HDMI speakers disabled
@@ -177,17 +178,11 @@ private:
         void chkDpConnAndAllowedForVoice();
         // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
-#ifdef VOICE_CONCURRENCY
         int mvoice_call_state;
-#endif
-#ifdef RECORD_PLAY_CONCURRENCY
         // Used for record + playback concurrency
         bool mIsInputRequestOnProgress;
-#endif
 
-#ifdef FM_POWER_OPT
         float mPrevFMVolumeDb;
         bool mFMIsActive;
-#endif
 };
 };

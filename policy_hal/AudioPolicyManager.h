@@ -86,7 +86,8 @@ public:
         status_t setDeviceConnectionStateInt(audio_devices_t device,
                                           audio_policy_dev_state_t state,
                                           const char *device_address,
-                                          const char *device_name);
+                                          const char *device_name,
+                                          audio_format_t encodedFormat);
         virtual void setPhoneState(audio_mode_t state);
         virtual void setForceUse(audio_policy_force_use_t usage,
                                  audio_policy_forced_cfg_t config);
@@ -114,7 +115,6 @@ public:
         static sp<APMConfigHelper> mApmConfigs;
 
 protected:
-
          status_t checkAndSetVolume(audio_stream_type_t stream,
                                                    int index,
                                                    const sp<AudioOutputDescriptor>& outputDesc,
@@ -123,11 +123,11 @@ protected:
 
         // avoid invalidation for active music stream on  previous outputs
         // which is supported on the new device.
-        bool isInvalidationOfMusicStreamNeeded(routing_strategy strategy);
+
+        bool isInvalidationOfMusicStreamNeeded(const audio_attributes_t &attr);
 
         // Must be called before updateDevicesAndOutputs()
-        void checkOutputForStrategy(routing_strategy strategy);
-
+        void checkOutputForAttributes(const audio_attributes_t &attr);
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
 
@@ -141,27 +141,29 @@ protected:
         // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON
         // returns 0 if no mute/unmute event happened, the largest latency of the device where
         //   the mute/unmute happened
+
         uint32_t handleEventForBeacon(int){return 0;}
         uint32_t setBeaconMute(bool){return 0;}
         static audio_output_flags_t getFallBackPath();
         int mFallBackflag;
         void moveGlobalEffect();
-
         //parameter indicates of HDMI speakers disabled
         bool mHdmiAudioDisabled;
         //parameter indicates if HDMI plug in/out detected
         bool mHdmiAudioEvent;
+
 private:
         // updates device caching and output for streams that can influence the
         //    routing of notifications
         void handleNotificationRoutingForStream(audio_stream_type_t stream);
         // internal method to return the output handle for the given device and format
-        audio_io_handle_t getOutputForDevice(
-                audio_devices_t device,
+        audio_io_handle_t getOutputForDevices(
+                const DeviceVector &devices,
                 audio_session_t session,
                 audio_stream_type_t stream,
                 const audio_config_t *config,
                 audio_output_flags_t *flags);
+
 
         // internal method to fill offload info in case of Direct PCM
         status_t getOutputForAttr(const audio_attributes_t *attr,
@@ -172,7 +174,12 @@ private:
                 const audio_config_t *config,
                 audio_output_flags_t *flags,
                 audio_port_handle_t *selectedDeviceId,
-                audio_port_handle_t *portId);
+                audio_port_handle_t *portId,
+                std::vector<audio_io_handle_t> *secondaryOutputs);
+
+
+
+
         // internal method to query hal for whether display-port is connected
         // and can be used for voip/voice call
         void chkDpConnAndAllowedForVoice();

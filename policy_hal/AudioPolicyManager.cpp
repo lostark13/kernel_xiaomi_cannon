@@ -1491,7 +1491,10 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
         }
     } else {
         if (stream == AUDIO_STREAM_VOICE_CALL &&
-            audio_is_linear_pcm(config->format)) {
+            audio_is_linear_pcm(config->format) &&
+            (config->channel_mask == 1) &&
+            (config->sample_rate == 8000 || config->sample_rate == 16000 ||
+            config->sample_rate == 32000 || config->sample_rate == 48000)) {
             //check if VoIP output is not opened already
             bool voip_pcm_already_in_use = false;
             for (size_t i = 0; i < mOutputs.size(); i++) {

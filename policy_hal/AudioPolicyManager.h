@@ -128,8 +128,6 @@ protected:
 
         // Must be called before updateDevicesAndOutputs()
         void checkOutputForAttributes(const audio_attributes_t &attr);
-        // returns true if given output is direct output
-        bool isDirectOutput(audio_io_handle_t output);
 
         // if argument "device" is different from AUDIO_DEVICE_NONE,  startSource() will force
         // the re-evaluation of the output device.
@@ -146,16 +144,12 @@ protected:
         uint32_t setBeaconMute(bool){return 0;}
         static audio_output_flags_t getFallBackPath();
         int mFallBackflag;
-        void moveGlobalEffect();
         //parameter indicates of HDMI speakers disabled
         bool mHdmiAudioDisabled;
         //parameter indicates if HDMI plug in/out detected
         bool mHdmiAudioEvent;
 
 private:
-        // updates device caching and output for streams that can influence the
-        //    routing of notifications
-        void handleNotificationRoutingForStream(audio_stream_type_t stream);
         // internal method to return the output handle for the given device and format
         audio_io_handle_t getOutputForDevices(
                 const DeviceVector &devices,

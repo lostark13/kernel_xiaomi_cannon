@@ -186,13 +186,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             }
             // Propagate device availability to Engine
             mEngine->setDeviceConnectionState(device, state);
-//TODO CP Begin
-#if 0
             if (deviceType == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
                 chkDpConnAndAllowedForVoice();
             }
-#endif
-//TODO CP End
 
             // outputs should never be empty here
             ALOG_ASSERT(outputs.size() != 0, "setDeviceConnectionState():"
@@ -239,13 +235,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 
             // Propagate device availability to Engine
             mEngine->setDeviceConnectionState(device, state);
-//TODO CP Begin
-#if 0
             if (deviceType == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
                 mEngine->setDpConnAndAllowedForVoice(false);
             }
-#endif
-//TODO CP End
             } break;
 
         default:
@@ -308,60 +300,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
         } else {
             checkCloseOutputs();
         }
-
-        // handle FM device connection state to trigger FM AFE loopback
-//TODO CP Begin
-#if 0
-        if (mApmConfigs->isFMPowerOptEnabled() &&
-               deviceType == AUDIO_DEVICE_OUT_FM && hasPrimaryOutput()) {
-           audio_devices_t newDevice = AUDIO_DEVICE_NONE;
-           if (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
-               /*
-                 when mPrimaryOutput->start() is called for FM it would check if isActive() is true
-                 or not as streamActiveCount=0 so isActive() would return false and curActiveCount will be
-                 1 and then the streamActiveCount will be increased by 1 for FM case.Updating curActiveCount
-                 is important as in case of adding other tracks when FM is still active isActive()
-                 will always be true as streamActiveCount will always be > 0,Hence curActiveCount will never
-                 update for them. However ,when fm stops and the track stops too streamActiveCount will be 0
-                 isActive will false,it will check if curActiveCount < 1 as curActiveCount was never
-                 updated so LOG_FATAL will cause the AudioServer to die.Hence this start() call will
-                 ensure that curActiveCount is updated at least once when FM starts prior to other
-                 tracks and on calling of stop() LOG_FATAL is not called.
-               */
-               mPrimaryOutput->start();
-               for (const std::pair<sp<TrackClientDescriptor>, size_t>& client_pair : mPrimaryOutput->getActiveClients()) {
-                    if (client_pair.first->stream() == AUDIO_STREAM_MUSIC) {
-                        mPrimaryOutput->changeStreamActiveCount(client_pair.first, 1);
-                        break;
-                    }
-               }
-               newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false)|AUDIO_DEVICE_OUT_FM);
-               mFMIsActive = true;
-               mPrimaryOutput->mDevice = newDevice & ~AUDIO_DEVICE_OUT_FM;
-           } else {
-               newDevice = (audio_devices_t)(getNewOutputDevice(mPrimaryOutput, false));
-               mFMIsActive = false;
-               for (const std::pair<sp<TrackClientDescriptor>, size_t>& client_pair : mPrimaryOutput->getActiveClients()) {
-                    if (client_pair.first->stream() == AUDIO_STREAM_MUSIC) {
-                        mPrimaryOutput->changeStreamActiveCount(client_pair.first, -1);
-                        break;
-                    }
-               }
-               /*
-                 mPrimaryOutput->stop() is called as because of calling of start()
-                 in FM case curActiveCount is getting updated and hence stop() is
-                 called so that curActiveCount gets decremented and if any tracks
-                 are added after FM stops they may get curActiveCount=0 ,ouptput
-                 curActiveCount can be properly updated
-               */
-               mPrimaryOutput->stop();
-           }
-           AudioParameter param = AudioParameter();
-           param.addInt(String8("handle_fm"), (int)newDevice);
-           mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString());
-        }
-#endif
-//TODO CP End
 
         if (mEngine->getPhoneState() == AUDIO_MODE_IN_CALL && hasPrimaryOutput()) {
             DeviceVector newDevices = getNewOutputDevices(mPrimaryOutput, false /*fromCache*/);
@@ -482,8 +420,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
 }
 
 
-//TODO CP Begin
-#if 0
 
 void AudioPolicyManagerCustom::chkDpConnAndAllowedForVoice()
 {
@@ -498,8 +434,6 @@ void AudioPolicyManagerCustom::chkDpConnAndAllowedForVoice()
     }
     mEngine->setDpConnAndAllowedForVoice(connAndAllowed);
 }
-#endif
-//TODO CP End
 
 bool AudioPolicyManagerCustom::isInvalidationOfMusicStreamNeeded(const audio_attributes_t &attr)
 {
@@ -1399,20 +1333,7 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(audio_stream_type_t stream,
             mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
             mLastVoiceVolume = voiceVolume;
         }
-    } else if (mApmConfigs->isFMPowerOptEnabled() &&
-               stream == AUDIO_STREAM_MUSIC && hasPrimaryOutput() &&
-               outputDesc == mPrimaryOutput && mFMIsActive) {
-        /* Avoid unnecessary set_parameter calls as it puts the primary
-           outputs FastMixer in HOT_IDLE leading to breaks in audio */
-        if (volumeDb != mPrevFMVolumeDb) {
-            mPrevFMVolumeDb = volumeDb;
-            AudioParameter param = AudioParameter();
-            param.addFloat(String8("fm_volume"), Volume::DbToAmpl(volumeDb));
-            //Double delayMs to avoid sound burst while device switch.
-            mpClientInterface->setParameters(mPrimaryOutput->mIoHandle, param.toString(), delayMs*2);
-        }
     }
-
     return NO_ERROR;
 }
 
@@ -2199,9 +2120,7 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
       mHdmiAudioDisabled(false),
       mHdmiAudioEvent(false),
       mPrevPhoneState(0),
-      mIsInputRequestOnProgress(false),
-      mPrevFMVolumeDb(0.0f),
-      mFMIsActive(false)
+      mIsInputRequestOnProgress(false)
 {
     if (mApmConfigs->useXMLAudioPolicyConf())
         ALOGD("USE_XML_AUDIO_POLICY_CONF is TRUE");

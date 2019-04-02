@@ -182,8 +182,5 @@ private:
         int mvoice_call_state;
         // Used for record + playback concurrency
         bool mIsInputRequestOnProgress;
-
-        float mPrevFMVolumeDb;
-        bool mFMIsActive;
 };
 };

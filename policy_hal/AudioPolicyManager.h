@@ -115,11 +115,12 @@ public:
         static sp<APMConfigHelper> mApmConfigs;
 
 protected:
-         status_t checkAndSetVolume(audio_stream_type_t stream,
-                                                   int index,
-                                                   const sp<AudioOutputDescriptor>& outputDesc,
-                                                   audio_devices_t device,
-                                                   int delayMs = 0, bool force = false);
+        // check that volume change is permitted, compute and send new volume to audio hardware
+        virtual status_t checkAndSetVolume(IVolumeCurves &curves,
+                                           VolumeSource volumeSource, int index,
+                                           const sp<AudioOutputDescriptor>& outputDesc,
+                                           audio_devices_t device,
+                                           int delayMs = 0, bool force = false);
 
         // avoid invalidation for active music stream on  previous outputs
         // which is supported on the new device.
@@ -156,8 +157,8 @@ private:
                 audio_session_t session,
                 audio_stream_type_t stream,
                 const audio_config_t *config,
-                audio_output_flags_t *flags);
-
+                audio_output_flags_t *flags,
+                bool forceMutingHaptic = false);
 
         // internal method to fill offload info in case of Direct PCM
         status_t getOutputForAttr(const audio_attributes_t *attr,

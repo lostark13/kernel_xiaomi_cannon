@@ -184,8 +184,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                 broadcastDeviceConnectionState(device, AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE);
                 return INVALID_OPERATION;
             }
-            // Propagate device availability to Engine
-            mEngine->setDeviceConnectionState(device, state);
             if (deviceType == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
                 chkDpConnAndAllowedForVoice();
             }
@@ -233,8 +231,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             // Reset active device codec
             device->setEncodedFormat(AUDIO_FORMAT_DEFAULT);
 
-            // Propagate device availability to Engine
-            mEngine->setDeviceConnectionState(device, state);
             if (deviceType == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
                 mEngine->setDpConnAndAllowedForVoice(false);
             }
@@ -244,6 +240,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             ALOGE("%s() invalid state: %x", __func__, state);
             return BAD_VALUE;
         }
+
+        // Propagate device availability to Engine
+        setEngineDeviceConnectionState(device, state);
 
         if (!outputs.isEmpty()) {
             for (size_t i = 0; i < outputs.size(); i++) {
@@ -369,8 +368,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                 return NO_MEMORY;
             }
 
-            // Propagate device availability to Engine
-            mEngine->setDeviceConnectionState(device, state);
         } break;
 
         // handle input device disconnection
@@ -388,14 +385,15 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             checkInputsForDevice(device, state, inputs);
             mAvailableInputDevices.remove(device);
 
-            // Propagate device availability to Engine
-            mEngine->setDeviceConnectionState(device, state);
         } break;
 
         default:
             ALOGE("setDeviceConnectionState() invalid state: %x", state);
             return BAD_VALUE;
         }
+
+        // Propagate device availability to Engine
+        setEngineDeviceConnectionState(device, state);
 
         closeAllInputs();
         /*audio policy: fix call volume over USB*/
@@ -1106,7 +1104,7 @@ status_t AudioPolicyManagerCustom::stopSource(const sp<SwAudioOutputDescriptor>&
 
         if (stream == AUDIO_STREAM_ENFORCED_AUDIBLE &&
                 mEngine->getForceUse(AUDIO_POLICY_FORCE_FOR_SYSTEM) == AUDIO_POLICY_FORCE_SYSTEM_ENFORCED) {
-            setStrategyMute(streamToStrategy(AUDIO_STREAM_RING), false, outputDesc);
+            setStrategyMute(streamToStrategy(AUDIO_STREAM_ALARM), false, outputDesc);
         }
 
         if (followsSameRouting(client->attributes(), attributes_initializer(AUDIO_USAGE_MEDIA))) {
@@ -1139,7 +1137,7 @@ status_t AudioPolicyManagerCustom::startSource(const sp<SwAudioOutputDescriptor>
     if (stream == AUDIO_STREAM_TTS) {
         ALOGV("\t found BEACON stream");
         if (!mTtsOutputAvailable && mOutputs.isAnyOutputActive(
-                    streamToVolumeSource(AUDIO_STREAM_TTS) /*sourceToIgnore*/)) {
+                    toVolumeSource(AUDIO_STREAM_TTS) /*sourceToIgnore*/)) {
             return INVALID_OPERATION;
         } else {
             beaconMuteLatency = handleEventForBeacon(STARTING_BEACON);

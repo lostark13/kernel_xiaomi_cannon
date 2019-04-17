@@ -1745,82 +1745,80 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
             goto non_direct_output;
         }
 
-        if ((*flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) == 0 || output != AUDIO_IO_HANDLE_NONE) {
-            sp<SwAudioOutputDescriptor> outputDesc = NULL;
-            // if multiple concurrent offload decode is supported
-            // do no check for reuse and also don't close previous output if its offload
-            // previous output will be closed during track destruction
-            if (!mApmConfigs->isAudioMultipleOffloadEnable() &&
-                    ((*flags & AUDIO_OUTPUT_FLAG_DIRECT) != 0)) {
-                for (size_t i = 0; i < mOutputs.size(); i++) {
-                    sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
-                    if (!desc->isDuplicated() && (profile == desc->mProfile)) {
-                        outputDesc = desc;
-                        // reuse direct output if currently open by the same client
-                        // and configured with same parameters
-                        if ((config->sample_rate == desc->mSamplingRate) &&
-                            audio_formats_match(config->format, desc->mFormat) &&
-                            (channelMask == desc->mChannelMask) &&
-                            (session == desc->mDirectClientSession)) {
-                            desc->mDirectOpenCount++;
-                            ALOGV("getOutputForDevice() reusing direct output %d for session %d",
-                                mOutputs.keyAt(i), session);
-                            return mOutputs.keyAt(i);
-                        }
-                    }
-                    if (outputDesc != NULL) {
-                        if ((((*flags == AUDIO_OUTPUT_FLAG_DIRECT) && direct_pcm_already_in_use) ||
-                            ((*flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-                             compress_offload_already_in_use)) &&
-                             session != outputDesc->mDirectClientSession) {
-                             ALOGV("getOutput() do not reuse direct pcm output because current client (%d) "
-                                   "is not the same as requesting client (%d) for different output conf",
-                             outputDesc->mDirectClientSession, session);
-                             goto non_direct_output;
-                        }
-                        closeOutput(outputDesc->mIoHandle);
+        sp<SwAudioOutputDescriptor> outputDesc = NULL;
+        // if multiple concurrent offload decode is supported
+        // do no check for reuse and also don't close previous output if its offload
+        // previous output will be closed during track destruction
+        if (!mApmConfigs->isAudioMultipleOffloadEnable() &&
+                ((*flags & AUDIO_OUTPUT_FLAG_DIRECT) != 0)) {
+            for (size_t i = 0; i < mOutputs.size(); i++) {
+                sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+                if (!desc->isDuplicated() && (profile == desc->mProfile)) {
+                    outputDesc = desc;
+                    // reuse direct output if currently open by the same client
+                    // and configured with same parameters
+                    if ((config->sample_rate == desc->mSamplingRate) &&
+                        audio_formats_match(config->format, desc->mFormat) &&
+                        (channelMask == desc->mChannelMask) &&
+                        (session == desc->mDirectClientSession)) {
+                        desc->mDirectOpenCount++;
+                        ALOGV("getOutputForDevice() reusing direct output %d for session %d",
+                            mOutputs.keyAt(i), session);
+                        return mOutputs.keyAt(i);
                     }
                 }
-                if (!profile->canOpenNewIo()) {
-                    goto non_direct_output;
+            }
+            if (outputDesc != NULL) {
+                if ((((*flags == AUDIO_OUTPUT_FLAG_DIRECT) && direct_pcm_already_in_use) ||
+                    ((*flags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
+                     compress_offload_already_in_use)) &&
+                     session != outputDesc->mDirectClientSession) {
+                     ALOGV("getOutput() do not reuse direct pcm output because current client (%d) "
+                           "is not the same as requesting client (%d) for different output conf",
+                     outputDesc->mDirectClientSession, session);
+                     goto non_direct_output;
                 }
-
-                outputDesc =
-                        new SwAudioOutputDescriptor(profile, mpClientInterface);
-                DeviceVector outputDevices = mAvailableOutputDevices.getDevicesFromTypeMask(devices.types());
-                String8 address = outputDevices.size() > 0 ? outputDevices.itemAt(0)->address()
-                        : String8("");
-                status = outputDesc->open(config, devices, stream, *flags, &output);
-
-                // only accept an output with the requested parameters
-                if (status != NO_ERROR ||
-                    (config->sample_rate != 0 && config->sample_rate != outputDesc->mSamplingRate) ||
-                    (config->format != AUDIO_FORMAT_DEFAULT &&
-                             !audio_formats_match(config->format, outputDesc->mFormat)) ||
-                    (channelMask != 0 && channelMask != outputDesc->mChannelMask)) {
-                    ALOGV("getOutputForDevice() failed opening direct output: output %d sample rate %d %d,"
-                            "format %d %d, channel mask %04x %04x", output, config->sample_rate,
-                            outputDesc->mSamplingRate, config->format, outputDesc->mFormat,
-                            channelMask, outputDesc->mChannelMask);
-                    if (output != AUDIO_IO_HANDLE_NONE) {
-                        outputDesc->close();
-                    }
-                    // fall back to mixer output if possible when the direct output could not be open
-                    if (audio_is_linear_pcm(config->format) && config->sample_rate <= SAMPLE_RATE_HZ_MAX) {
-                        goto non_direct_output;
-                    }
-                    return AUDIO_IO_HANDLE_NONE;
-                }
-                outputDesc->mDirectOpenCount = 1;
-                outputDesc->mDirectClientSession = session;
-
-                addOutput(output, outputDesc);
-                mPreviousOutputs = mOutputs;
-                ALOGV("getOutputForDevice() returns new direct output %d", output);
-                mpClientInterface->onAudioPortListUpdate();
-                return output;
+                closeOutput(outputDesc->mIoHandle);
             }
         }
+        if (!profile->canOpenNewIo()) {
+            goto non_direct_output;
+        }
+
+        outputDesc =
+                new SwAudioOutputDescriptor(profile, mpClientInterface);
+        DeviceVector outputDevices = mAvailableOutputDevices.getDevicesFromTypeMask(devices.types());
+        String8 address = outputDevices.size() > 0 ? outputDevices.itemAt(0)->address()
+                : String8("");
+        status = outputDesc->open(config, devices, stream, *flags, &output);
+
+        // only accept an output with the requested parameters
+        if (status != NO_ERROR ||
+            (config->sample_rate != 0 && config->sample_rate != outputDesc->mSamplingRate) ||
+            (config->format != AUDIO_FORMAT_DEFAULT &&
+                     !audio_formats_match(config->format, outputDesc->mFormat)) ||
+            (channelMask != 0 && channelMask != outputDesc->mChannelMask)) {
+            ALOGV("getOutputForDevice() failed opening direct output: output %d sample rate %d %d,"
+                    "format %d %d, channel mask %04x %04x", output, config->sample_rate,
+                    outputDesc->mSamplingRate, config->format, outputDesc->mFormat,
+                    channelMask, outputDesc->mChannelMask);
+            if (output != AUDIO_IO_HANDLE_NONE) {
+                outputDesc->close();
+            }
+            // fall back to mixer output if possible when the direct output could not be open
+            if (audio_is_linear_pcm(config->format) && config->sample_rate <= SAMPLE_RATE_HZ_MAX) {
+                goto non_direct_output;
+            }
+            return AUDIO_IO_HANDLE_NONE;
+        }
+        outputDesc->mDirectOpenCount = 1;
+        outputDesc->mDirectClientSession = session;
+
+        addOutput(output, outputDesc);
+        mPreviousOutputs = mOutputs;
+        ALOGV("getOutputForDevice() returns new direct output %d", output);
+        mpClientInterface->onAudioPortListUpdate();
+        return output;
     }
 
 non_direct_output:

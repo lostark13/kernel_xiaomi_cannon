@@ -522,7 +522,7 @@ bool AudioPolicyManagerCustom::isOffloadSupported(const audio_offload_info_t& of
     }
 
     // Check if offload has been disabled
-    bool offloadDisabled = property_get_bool("audio.offload.disable", false);
+    bool offloadDisabled = mApmConfigs->isAudioOffloadDisabled();
     if (offloadDisabled) {
         ALOGI("offload disabled by audio.offload.disable=%d", offloadDisabled);
         return false;
@@ -1639,7 +1639,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
     }
 
     // Do internal direct magic here
-    bool offload_disabled = property_get_bool("audio.offload.disable", false);
+    bool offload_disabled = mApmConfigs->isAudioOffloadDisabled();
     if ((*flags == AUDIO_OUTPUT_FLAG_NONE) &&
         (stream == AUDIO_STREAM_MUSIC) &&
         ( !offload_disabled) &&

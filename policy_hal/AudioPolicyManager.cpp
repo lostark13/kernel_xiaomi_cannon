@@ -1795,7 +1795,8 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
                     "format %d %d, channel mask %04x %04x", output, config->sample_rate,
                     outputDesc->mSamplingRate, config->format, outputDesc->mFormat,
                     channelMask, outputDesc->mChannelMask);
-            if (output != AUDIO_IO_HANDLE_NONE) {
+            //Only close o/p descriptor if successfully opened
+            if (status == NO_ERROR) {
                 outputDesc->close();
             }
             // fall back to mixer output if possible when the direct output could not be open

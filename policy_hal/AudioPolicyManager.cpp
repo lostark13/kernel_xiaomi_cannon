@@ -1969,6 +1969,11 @@ status_t AudioPolicyManagerCustom::startInput(audio_port_handle_t portId)
 
     audio_io_handle_t input = inputDesc->mIoHandle;
     sp<RecordClientDescriptor> client = inputDesc->getClient(portId);
+    if (client == NULL) {
+        ALOGW("%s invalid client desc for %d", __FUNCTION__, portId);
+        return BAD_VALUE;
+    }
+
     if (client->active()) {
         ALOGW("%s input %d client %d already started", __FUNCTION__, input, client->portId());
         return INVALID_OPERATION;

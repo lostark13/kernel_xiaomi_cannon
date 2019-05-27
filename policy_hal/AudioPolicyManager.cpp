@@ -1663,12 +1663,10 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
             if (desc->mFlags == AUDIO_OUTPUT_FLAG_DIRECT) {
                 direct_pcm_already_in_use = true;
                 ALOGD("Direct PCM already in use");
-                break;
             }
             if (desc->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) {
                 compress_offload_already_in_use = true;
                 ALOGD("Compress Offload already in use");
-                break;
             }
         }
         // prevent direct pcm for non-music stream blindly if direct pcm already in use

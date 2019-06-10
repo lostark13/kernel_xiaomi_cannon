@@ -1689,11 +1689,6 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
 
     if (stream == AUDIO_STREAM_TTS) {
         *flags = AUDIO_OUTPUT_FLAG_TTS;
-    } else if (stream == AUDIO_STREAM_VOICE_CALL &&
-               audio_is_linear_pcm(config->format)) {
-        *flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_VOIP_RX |
-                                       AUDIO_OUTPUT_FLAG_DIRECT);
-        ALOGV("Set VoIP and Direct output flags for PCM format");
     } else if (devices.types() == AUDIO_DEVICE_OUT_TELEPHONY_TX &&
         stream == AUDIO_STREAM_MUSIC &&
         audio_is_linear_pcm(config->format) &&

@@ -75,9 +75,6 @@ endif
 
 LOCAL_MODULE := libaudiopolicymanager
 
-ifeq ($(call is-board-platform-in-list,kona),true)
-LOCAL_SANITIZE := integer_overflow
-endif
 include $(BUILD_SHARED_LIBRARY)
 
 endif

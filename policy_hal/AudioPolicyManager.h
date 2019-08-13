@@ -19,7 +19,6 @@
 
 
 #include <audiopolicy/managerdefault/AudioPolicyManager.h>
-#include <audio_policy_conf.h>
 #include <Volume.h>
 #include "APMConfigHelper.h"
 

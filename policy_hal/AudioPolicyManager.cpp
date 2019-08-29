@@ -144,7 +144,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                     __func__, device->toString().c_str(), encodedFormat);
 
             // register new device as available
-            index = mAvailableOutputDevices.add(device);
+            if (mAvailableOutputDevices.add(device) < 0) {
+                return NO_MEMORY;
+            }
             if (mApmConfigs->isHDMISpkEnabled() &&
                     (popcount(deviceType) == 1) && (deviceType & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
                 if (!strncmp(device_address, "hdmi_spkr", 9)) {
@@ -157,19 +159,6 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                     ALOGW("HDMI sink not connected, do not route audio to HDMI out");
                     return INVALID_OPERATION;
                 }
-            }
-            if (index >= 0) {
-                sp<HwModule> module = mHwModules.getModuleForDevice(device, encodedFormat);
-                if (module == 0) {
-                    ALOGD("setDeviceConnectionState() could not find HW module for device %s",
-                          device->toString().c_str());
-                    mAvailableOutputDevices.remove(device);
-                    return INVALID_OPERATION;
-                }
-                ALOGV("setDeviceConnectionState() module name=%s", module->getName());
-                mAvailableOutputDevices[index]->attach(module);
-            } else {
-                return NO_MEMORY;
             }
 
             // Before checking outputs, broadcast connect event to allow HAL to retrieve dynamic
@@ -305,7 +294,7 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             DeviceVector newDevices = getNewOutputDevices(mPrimaryOutput, false /*fromCache*/);
             updateCallRouting(newDevices);
         }
-
+        const DeviceVector msdOutDevices = getMsdAudioOutDevices();
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
             if ((mEngine->getPhoneState() != AUDIO_MODE_IN_CALL) || (desc != mPrimaryOutput)) {
@@ -313,7 +302,8 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                 // do not force device change on duplicated output because if device is 0, it will
                 // also force a device 0 for the two outputs it is duplicated to which may override
                 // a valid device selection on those outputs.
-                bool force = !desc->isDuplicated()
+                bool force = (msdOutDevices.isEmpty() || msdOutDevices != desc->devices())
+                        && !desc->isDuplicated()
                         && (!device_distinguishes_on_address(deviceType)
                                 // always force when disconnecting (a non-duplicated device)
                                 || (state == AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE));
@@ -340,11 +330,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
                 ALOGW("setDeviceConnectionState() device already connected: %d", deviceType);
                 return INVALID_OPERATION;
             }
-            sp<HwModule> module = mHwModules.getModuleForDevice(device, AUDIO_FORMAT_DEFAULT);
-            if (module == NULL) {
-                ALOGW("setDeviceConnectionState(): could not find HW module for device %08x",
-                      deviceType);
-                return INVALID_OPERATION;
+
+            if (mAvailableInputDevices.add(device) < 0) {
+                return NO_MEMORY;
             }
 
             // Before checking intputs, broadcast connect event to allow HAL to retrieve dynamic
@@ -352,18 +340,13 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             broadcastDeviceConnectionState(device, state);
 
             if (checkInputsForDevice(device, state) != NO_ERROR) {
+                mAvailableInputDevices.remove(device);
+
                 broadcastDeviceConnectionState(device, AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE);
 
                 mHwModules.cleanUpForDevice(device);
 
                 return INVALID_OPERATION;
-            }
-
-            index = mAvailableInputDevices.add(device);
-            if (index >= 0) {
-                mAvailableInputDevices[index]->attach(module);
-            } else {
-                return NO_MEMORY;
             }
 
         } break;
@@ -380,8 +363,9 @@ status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t d
             // Set Disconnect to HALs
             broadcastDeviceConnectionState(device, state);
 
-            checkInputsForDevice(device, state);
             mAvailableInputDevices.remove(device);
+
+            checkInputsForDevice(device, state);
 
         } break;
 
@@ -929,12 +913,13 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
             setOutputDevices(mPrimaryOutput, rxDevices, force, 0);
         }
     }
-    //update device for all non-primary outputs
+
+    // reevaluate routing on all outputs in case tracks have been started during the call
     for (size_t i = 0; i < mOutputs.size(); i++) {
-        audio_io_handle_t output = mOutputs.keyAt(i);
-        if (output != mPrimaryOutput->mIoHandle) {
-            DeviceVector newDevices = getNewOutputDevices(mOutputs.valueFor(output), false /*fromCache*/);
-            setOutputDevices(mOutputs.valueFor(output), newDevices, !newDevices.isEmpty());
+        sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
+        DeviceVector newDevices = getNewOutputDevices(desc, true /*fromCache*/);
+        if (state != AUDIO_MODE_IN_CALL || desc != mPrimaryOutput) {
+            setOutputDevices(desc, newDevices, !newDevices.isEmpty(), 0 /*delayMs*/);
         }
     }
     if (isStateInCall(state)) {
@@ -968,7 +953,12 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
     // check for device and output changes triggered by new force usage
     checkForDeviceAndOutputChanges();
 
-    /*audio policy: workaround for truncated touch sounds*/
+     // force client reconnection to reevaluate flag AUDIO_FLAG_AUDIBILITY_ENFORCED
+     if (usage == AUDIO_POLICY_FORCE_FOR_SYSTEM) {
+         mpClientInterface->invalidateStream(AUDIO_STREAM_SYSTEM);
+         mpClientInterface->invalidateStream(AUDIO_STREAM_ENFORCED_AUDIBLE);
+     }
+
     //FIXME: workaround for truncated touch sounds
     // to be removed when the problem is handled by system UI
     uint32_t delayMs = 0;
@@ -1023,6 +1013,7 @@ void AudioPolicyManagerCustom::setForceUse(audio_policy_force_use_t usage,
 status_t AudioPolicyManagerCustom::stopSource(const sp<SwAudioOutputDescriptor>& outputDesc,
                                               const sp<TrackClientDescriptor>& client)
 {
+    // always handle stream stop, check which stream type is stopping
     audio_stream_type_t stream = client->stream();
     auto clientVolSrc = client->volumeSource();
 
@@ -1030,7 +1021,6 @@ status_t AudioPolicyManagerCustom::stopSource(const sp<SwAudioOutputDescriptor>&
         ALOGW("stopSource() invalid stream %d", stream);
         return INVALID_OPERATION;
     }
-    // always handle stream stop, check which stream type is stopping
     handleEventForBeacon(stream == AUDIO_STREAM_TTS ? STOPPING_BEACON : STOPPING_OUTPUT);
 
     if (outputDesc->getActivityCount(clientVolSrc) > 0) {
@@ -1089,8 +1079,7 @@ status_t AudioPolicyManagerCustom::stopSource(const sp<SwAudioOutputDescriptor>&
                                     dev,
                                     force,
                                     delayMs);
-                    /*audio policy: fix media volume after ringtone*/
-                    // re-apply device specific volume if not done by setOutputDevice()
+                     // re-apply device specific volume if not done by setOutputDevice()
                      if (!force) {
                          applyStreamVolumes(desc, dev.types(), delayMs);
                      }
@@ -1179,7 +1168,14 @@ status_t AudioPolicyManagerCustom::startSource(const sp<SwAudioOutputDescriptor>
     outputDesc->setClientActive(client, true);
 
     if (client->hasPreferredDevice(true)) {
-        devices = getNewOutputDevices(outputDesc, false /*fromCache*/);
+        if (outputDesc->clientsList(true /*activeOnly*/).size() == 1 &&
+                client->isPreferredDeviceForExclusiveUse()) {
+            // Preferred device may be exclusive, use only if no other active clients on this output
+            devices = DeviceVector(
+                    mAvailableOutputDevices.getDeviceFromId(client->preferredDeviceId()));
+        } else {
+            devices = getNewOutputDevices(outputDesc, false /*fromCache*/);
+        }
         if (devices != outputDesc->devices()) {
             checkStrategyRoute(clientStrategy, outputDesc->mIoHandle);
         }
@@ -1324,11 +1320,11 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(IVolumeCurves &curves,
 
       if (isVoiceVolSrc || isBtScoVolSrc) {
         float voiceVolume;
-        // Force voice volume to max for bluetooth SCO as volume is managed by the headset
+        // Force voice volume to max or mute for Bluetooth SCO as other attenuations are managed by the headset
         if (isVoiceVolSrc) {
             voiceVolume = (float)index/(float)curves.getVolumeIndexMax();
         } else {
-            voiceVolume = 1.0;
+            voiceVolume = index == 0 ? 0.0 : 1.0;
         }
 
         if (voiceVolume != mLastVoiceVolume) {

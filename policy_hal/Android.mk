@@ -17,6 +17,7 @@ LOCAL_C_INCLUDES := $(TOPDIR)frameworks/av/services \
                     $(call include-path-for, avextension) \
 
 LOCAL_HEADER_LIBRARIES := \
+        libaudiofoundation_headers \
         libbase_headers \
         libstagefright_foundation_headers
 

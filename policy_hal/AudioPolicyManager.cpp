@@ -88,7 +88,13 @@ audio_output_flags_t AudioPolicyManagerCustom::getFallBackPath()
 extern "C" AudioPolicyInterface* createAudioPolicyManager(
          AudioPolicyClientInterface *clientInterface)
 {
-     return new AudioPolicyManagerCustom(clientInterface);
+     AudioPolicyManagerCustom *apm = new AudioPolicyManagerCustom(clientInterface);
+     status_t status = apm->initialize();
+     if (status != NO_ERROR) {
+         delete apm;
+         apm = nullptr;
+     }
+     return apm;
 }
 
 extern "C" void destroyAudioPolicyManager(AudioPolicyInterface *interface)

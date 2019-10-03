@@ -26,6 +26,7 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     liblog \
     libsoundtrigger \
+    libaudiofoundation \
     libaudiopolicymanagerdefault
 
 LOCAL_STATIC_LIBRARIES := \

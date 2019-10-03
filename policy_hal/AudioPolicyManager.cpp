@@ -447,7 +447,8 @@ bool AudioPolicyManagerCustom::isInvalidationOfMusicStreamNeeded(const audio_att
     if (followsSameRouting(attr, attributes_initializer(AUDIO_USAGE_MEDIA))) {
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<SwAudioOutputDescriptor> newOutputDesc = mOutputs.valueAt(i);
-            if (newOutputDesc->mFormat == AUDIO_FORMAT_DSD)
+            // KEYSTONE(I61de3f5a482a66e5bd52c3cc580751f53fe9c25c,b/142475179)
+            if (newOutputDesc->getFormat() == AUDIO_FORMAT_DSD)
                 return false;
         }
     }
@@ -842,7 +843,7 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
 
         if (mApmConfigs->isVoiceDSDConcDisabled() &&
             (outputDesc->mFlags & AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) &&
-            (outputDesc->mFormat == AUDIO_FORMAT_DSD)) {
+            (outputDesc->getFormat() == AUDIO_FORMAT_DSD)) {
             ALOGD("voice_conc:calling closeOutput on call mode for DSD COMPRESS output");
             closeOutput(mOutputs.keyAt(i));
             // call invalidate for music, so that DSD compress will fallback to deep-buffer.
@@ -1772,9 +1773,9 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
                     outputDesc = desc;
                     // reuse direct output if currently open by the same client
                     // and configured with same parameters
-                    if ((config->sample_rate == desc->mSamplingRate) &&
-                        audio_formats_match(config->format, desc->mFormat) &&
-                        (channelMask == desc->mChannelMask) &&
+                    if ((config->sample_rate == desc->getSamplingRate()) &&
+                        audio_formats_match(config->format, desc->getFormat()) &&
+                        (channelMask == desc->getChannelMask()) &&
                         (session == desc->mDirectClientSession)) {
                         desc->mDirectOpenCount++;
                         ALOGV("getOutputForDevice() reusing direct output %d for session %d",
@@ -1803,20 +1804,20 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
         outputDesc =
                 new SwAudioOutputDescriptor(profile, mpClientInterface);
         DeviceVector outputDevices = mAvailableOutputDevices.getDevicesFromTypeMask(devices.types());
-        String8 address = outputDevices.size() > 0 ? outputDevices.itemAt(0)->address()
+        String8 address = outputDevices.size() > 0 ? String8(outputDevices.itemAt(0)->address().data())
                 : String8("");
         status = outputDesc->open(config, devices, stream, *flags, &output);
 
         // only accept an output with the requested parameters
         if (status != NO_ERROR ||
-            (config->sample_rate != 0 && config->sample_rate != outputDesc->mSamplingRate) ||
+            (config->sample_rate != 0 && config->sample_rate != outputDesc->getSamplingRate()) ||
             (config->format != AUDIO_FORMAT_DEFAULT &&
-                     !audio_formats_match(config->format, outputDesc->mFormat)) ||
-            (channelMask != 0 && channelMask != outputDesc->mChannelMask)) {
+                     !audio_formats_match(config->format, outputDesc->getFormat())) ||
+            (channelMask != 0 && channelMask != outputDesc->getChannelMask())) {
             ALOGV("getOutputForDevice() failed opening direct output: output %d sample rate %d %d,"
                     "format %d %d, channel mask %04x %04x", output, config->sample_rate,
-                    outputDesc->mSamplingRate, config->format, outputDesc->mFormat,
-                    channelMask, outputDesc->mChannelMask);
+                    outputDesc->getSamplingRate(), config->format, outputDesc->getFormat(),
+                    channelMask, outputDesc->getChannelMask());
             //Only close o/p descriptor if successfully opened
             if (status == NO_ERROR) {
                 outputDesc->close();

@@ -119,7 +119,7 @@ protected:
         virtual status_t checkAndSetVolume(IVolumeCurves &curves,
                                            VolumeSource volumeSource, int index,
                                            const sp<AudioOutputDescriptor>& outputDesc,
-                                           audio_devices_t device,
+                                           DeviceTypeSet deviceTypes,
                                            int delayMs = 0, bool force = false);
 
         // avoid invalidation for active music stream on  previous outputs

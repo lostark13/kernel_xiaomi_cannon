@@ -1055,7 +1055,7 @@ status_t AudioPolicyManagerCustom::stopSource(const sp<SwAudioOutputDescriptor>&
             // Automatically disable the remote submix input when output is stopped on a
             // re routing mix of type MIX_TYPE_RECORDERS
             sp<AudioPolicyMix> policyMix = outputDesc->mPolicyMix.promote();
-            if (audio_is_remote_submix_device(outputDesc->devices().types()) &&
+            if (isSingleDeviceType(outputDesc->devices().types(), &audio_is_remote_submix_device) &&
                 policyMix != NULL &&
                 policyMix->mMixType == MIX_TYPE_RECORDERS) {
                 setDeviceConnectionStateInt(AUDIO_DEVICE_IN_REMOTE_SUBMIX,
@@ -1291,7 +1291,8 @@ status_t AudioPolicyManagerCustom::startSource(const sp<SwAudioOutputDescriptor>
 
     // Automatically enable the remote submix input when output is started on a re routing mix
     // of type MIX_TYPE_RECORDERS
-    if (audio_is_remote_submix_device(devices.types()) && policyMix != NULL &&
+    if (isSingleDeviceType(devices.types(), &audio_is_remote_submix_device) &&
+        policyMix != NULL &&
         policyMix->mMixType == MIX_TYPE_RECORDERS) {
         setDeviceConnectionStateInt(AUDIO_DEVICE_IN_REMOTE_SUBMIX,
                                     AUDIO_POLICY_DEVICE_STATE_AVAILABLE,
@@ -1307,7 +1308,7 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(IVolumeCurves &curves,
                                                VolumeSource volumeSource,
                                                int index,
                                                const sp<AudioOutputDescriptor>& outputDesc,
-                                               audio_devices_t device,
+                                               DeviceTypeSet deviceTypes,
                                                int delayMs,
                                                bool force)
 {
@@ -1334,16 +1335,16 @@ status_t AudioPolicyManagerCustom::checkAndSetVolume(IVolumeCurves &curves,
         return INVALID_OPERATION;
     }
 
-    if (device == AUDIO_DEVICE_NONE) {
-        device = outputDesc->devices().types();
+    if (deviceTypes.empty()) {
+        deviceTypes = outputDesc->devices().types();
     }
 
-    float volumeDb = computeVolume(curves, volumeSource, index, device);
-    if (outputDesc->isFixedVolume(device)) {
+    float volumeDb = computeVolume(curves, volumeSource, index, deviceTypes);
+    if (outputDesc->isFixedVolume(deviceTypes)) {
         volumeDb = 0.0f;
     }
 
-    outputDesc->setVolume(volumeDb, volumeSource, curves.getStreamTypes(), device, delayMs, force);
+    outputDesc->setVolume(volumeDb, volumeSource, curves.getStreamTypes(), deviceTypes, delayMs, force);
 
       if (isVoiceVolSrc || isBtScoVolSrc) {
         float voiceVolume;
@@ -1636,8 +1637,8 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
     * a non-music stream playback on WFD, so primary output is not reused for ringtone.
     */
     if (mApmConfigs->isAFEProxyEnabled()) {
-        audio_devices_t availableOutputDeviceTypes = mAvailableOutputDevices.types();
-        if ((availableOutputDeviceTypes & AUDIO_DEVICE_OUT_PROXY)
+        DeviceTypeSet availableOutputDeviceTypes = mAvailableOutputDevices.types();
+        if ((deviceTypesToBitMask(availableOutputDeviceTypes) & AUDIO_DEVICE_OUT_PROXY)
               && (stream != AUDIO_STREAM_MUSIC)) {
             ALOGD("WFD audio: use OUTPUT_FLAG_FAST for non music stream. flags:%x", *flags );
             //For voip paths
@@ -1712,7 +1713,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
 
     if (stream == AUDIO_STREAM_TTS) {
         *flags = AUDIO_OUTPUT_FLAG_TTS;
-    } else if (devices.types() == AUDIO_DEVICE_OUT_TELEPHONY_TX &&
+    } else if (devices.onlyContainsDevicesWithType(AUDIO_DEVICE_OUT_TELEPHONY_TX) &&
         stream == AUDIO_STREAM_MUSIC &&
         audio_is_linear_pcm(config->format) &&
         isInCall()) {
@@ -1803,7 +1804,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
 
         outputDesc =
                 new SwAudioOutputDescriptor(profile, mpClientInterface);
-        DeviceVector outputDevices = mAvailableOutputDevices.getDevicesFromTypeMask(devices.types());
+        DeviceVector outputDevices = mAvailableOutputDevices.getDevicesFromTypes(devices.types());
         String8 address = outputDevices.size() > 0 ? String8(outputDevices.itemAt(0)->address().data())
                 : String8("");
         status = outputDesc->open(config, devices, stream, *flags, &output);
@@ -2077,7 +2078,7 @@ status_t AudioPolicyManagerCustom::startInput(audio_port_handle_t portId)
         DeviceVector primaryInputDevices = availablePrimaryModuleInputDevices();
         if ((primaryInputDevices.contains(device) && (device->type() & ~AUDIO_DEVICE_BIT_IN)) != 0) {
             if (mApmConfigs->isVAConcEnabled()) {
-                if (activeNonSoundTriggerInputsCountOnDevices(primaryInputDevices.types()) == 1)
+                if (activeNonSoundTriggerInputsCountOnDevices(deviceTypesToBitMask(primaryInputDevices.types())) == 1)
                     SoundTrigger::setCaptureState(true);
             } else if (mInputs.activeInputsCountOnDevices(primaryInputDevices) == 1)
                 SoundTrigger::setCaptureState(true);
@@ -2125,7 +2126,7 @@ status_t AudioPolicyManagerCustom::stopInput(audio_port_handle_t portId)
     if (mApmConfigs->isVAConcEnabled()) {
         sp<AudioInputDescriptor> inputDesc = mInputs.getInputForClient(portId);
         if ((primaryInputDevices.contains(inputDesc->getDevice()) &&
-                activeNonSoundTriggerInputsCountOnDevices(primaryInputDevices.types())) == 0) {
+                activeNonSoundTriggerInputsCountOnDevices(deviceTypesToBitMask(primaryInputDevices.types()))) == 0) {
                 SoundTrigger::setCaptureState(false);
         }
     }

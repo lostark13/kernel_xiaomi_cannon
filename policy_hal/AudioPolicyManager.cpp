@@ -1383,7 +1383,8 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
                                                     audio_output_flags_t *flags,
                                                     audio_port_handle_t *selectedDeviceId,
                                                     audio_port_handle_t *portId,
-                                                    std::vector<audio_io_handle_t> *secondaryOutputs)
+                                                    std::vector<audio_io_handle_t> *secondaryOutputs,
+                                                    output_type_t *outputType)
 {
     audio_offload_info_t tOffloadInfo = AUDIO_INFO_INITIALIZER;
     audio_config_t tConfig;
@@ -1411,7 +1412,8 @@ status_t AudioPolicyManagerCustom::getOutputForAttr(const audio_attributes_t *at
                                                 flags,
                                                 (audio_port_handle_t*)selectedDeviceId,
                                                 portId,
-                                                secondaryOutputs);
+                                                secondaryOutputs,
+                                                outputType);
 }
 
 audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(

@@ -447,7 +447,6 @@ bool AudioPolicyManagerCustom::isInvalidationOfMusicStreamNeeded(const audio_att
     if (followsSameRouting(attr, attributes_initializer(AUDIO_USAGE_MEDIA))) {
         for (size_t i = 0; i < mOutputs.size(); i++) {
             sp<SwAudioOutputDescriptor> newOutputDesc = mOutputs.valueAt(i);
-            // KEYSTONE(I61de3f5a482a66e5bd52c3cc580751f53fe9c25c,b/142475179)
             if (newOutputDesc->getFormat() == AUDIO_FORMAT_DSD)
                 return false;
         }

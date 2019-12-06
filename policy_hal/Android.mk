@@ -72,7 +72,6 @@ endif
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_AHAL_EXT)), true)
     LOCAL_CFLAGS += -DAHAL_EXT_ENABLED
     LOCAL_SHARED_LIBRARIES += libhidlbase
-    LOCAL_SHARED_LIBRARIES += libhidltransport
     LOCAL_SHARED_LIBRARIES += vendor.qti.hardware.audiohalext@1.0
     LOCAL_SHARED_LIBRARIES += vendor.qti.hardware.audiohalext-utils
 endif

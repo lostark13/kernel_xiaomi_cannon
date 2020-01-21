@@ -27,7 +27,6 @@ LOCAL_SHARED_LIBRARIES := \
     libcutils \
     libutils \
     liblog \
-    libsoundtrigger \
     libaudiofoundation \
     libaudiopolicymanagerdefault
 

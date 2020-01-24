@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -58,18 +58,18 @@ sp<APMConfigHelper> AudioPolicyManagerCustom::mApmConfigs = new APMConfigHelper(
 audio_output_flags_t AudioPolicyManagerCustom::getFallBackPath()
 {
     audio_output_flags_t flag = AUDIO_OUTPUT_FLAG_FAST;
-    const char *fallback_path = mApmConfigs->getVoiceConcFallbackPath().c_str();
+    std::string fallback_path = mApmConfigs->getVoiceConcFallbackPath();
 
-    if (strlen(fallback_path) > 0) {
-        if (!strncmp(fallback_path, "deep-buffer", 11)) {
+    if (strlen(fallback_path.c_str()) > 0) {
+        if (!strncmp(fallback_path.c_str(), "deep-buffer", 11)) {
             flag = AUDIO_OUTPUT_FLAG_DEEP_BUFFER;
         }
-        else if (!strncmp(fallback_path, "fast", 4)) {
+        else if (!strncmp(fallback_path.c_str(), "fast", 4)) {
             flag = AUDIO_OUTPUT_FLAG_FAST;
         }
         else {
             ALOGD("voice_conc:not a recognised path(%s) in prop vendor.voice.conc.fallbackpath",
-                 fallback_path);
+                 fallback_path.c_str());
         }
     }
     else {

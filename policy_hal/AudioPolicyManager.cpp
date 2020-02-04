@@ -43,7 +43,6 @@
 #include <hardware/audio.h>
 #include <hardware/audio_effect.h>
 #include <media/AudioParameter.h>
-#include <soundtrigger/SoundTrigger.h>
 #include "AudioPolicyManager.h"
 #include <policy.h>
 
@@ -2080,9 +2079,9 @@ status_t AudioPolicyManagerCustom::startInput(audio_port_handle_t portId)
         if ((primaryInputDevices.contains(device) && (device->type() & ~AUDIO_DEVICE_BIT_IN)) != 0) {
             if (mApmConfigs->isVAConcEnabled()) {
                 if (activeNonSoundTriggerInputsCountOnDevices(deviceTypesToBitMask(primaryInputDevices.types())) == 1)
-                    SoundTrigger::setCaptureState(true);
+                    mpClientInterface->setSoundTriggerCaptureState(true);
             } else if (mInputs.activeInputsCountOnDevices(primaryInputDevices) == 1)
-                SoundTrigger::setCaptureState(true);
+                mpClientInterface->setSoundTriggerCaptureState(true);
         }
 
         // automatically enable the remote submix output when input is started if not
@@ -2128,7 +2127,7 @@ status_t AudioPolicyManagerCustom::stopInput(audio_port_handle_t portId)
         sp<AudioInputDescriptor> inputDesc = mInputs.getInputForClient(portId);
         if ((primaryInputDevices.contains(inputDesc->getDevice()) &&
                 activeNonSoundTriggerInputsCountOnDevices(deviceTypesToBitMask(primaryInputDevices.types()))) == 0) {
-                SoundTrigger::setCaptureState(false);
+                mpClientInterface->setSoundTriggerCaptureState(false);
         }
     }
     if (mApmConfigs->isRecPlayConcEnabled()) {

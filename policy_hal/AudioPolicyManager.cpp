@@ -926,11 +926,11 @@ void AudioPolicyManagerCustom::setPhoneState(audio_mode_t state)
             updateCallRouting(rxDevices, delayMs);
         } else if (oldState == AUDIO_MODE_IN_CALL) {
             if (mCallRxPatch != 0) {
-                mpClientInterface->releaseAudioPatch(mCallRxPatch->mAfPatchHandle, 0);
+                mpClientInterface->releaseAudioPatch(mCallRxPatch->getAfHandle(), 0);
                 mCallRxPatch.clear();
             }
             if (mCallTxPatch != 0) {
-                mpClientInterface->releaseAudioPatch(mCallTxPatch->mAfPatchHandle, 0);
+                mpClientInterface->releaseAudioPatch(mCallTxPatch->getAfHandle(), 0);
                 mCallTxPatch.clear();
             }
             setOutputDevices(mPrimaryOutput, rxDevices, force, 0);

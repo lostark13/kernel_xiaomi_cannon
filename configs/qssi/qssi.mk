@@ -178,3 +178,4 @@ PRODUCT_PACKAGES_ENG += \
 PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
+PRODUCT_PACKAGES += libnbaio

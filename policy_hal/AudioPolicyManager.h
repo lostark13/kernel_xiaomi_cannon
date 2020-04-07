@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
  * Not a contribution.
  *
  * Copyright (C) 2009 The Android Open Source Project
@@ -112,6 +112,7 @@ public:
         // indicates to the audio policy manager that the input stops being used.
         virtual status_t stopInput(audio_port_handle_t portId);
 
+        status_t dump(int fd) override;
         static sp<APMConfigHelper> mApmConfigs;
 
 protected:

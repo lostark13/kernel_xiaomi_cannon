@@ -2171,4 +2171,13 @@ AudioPolicyManagerCustom::AudioPolicyManagerCustom(AudioPolicyClientInterface *c
         mFallBackflag = getFallBackPath();
 }
 
+status_t AudioPolicyManagerCustom::dump(int fd)
+{
+    AudioPolicyManager::dump(fd);
+    String8 result;
+    mApmConfigs->dump(&result);
+    write(fd, result.string(), result.size());
+    return NO_ERROR;
+}
+
 }

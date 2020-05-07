@@ -1870,7 +1870,7 @@ non_direct_output:
             ALOGI("FLAG None hence request for a primary output");
         }
 
-        output = selectOutput(outputs, *flags, config->format);
+        output = selectOutput(outputs, *flags, config->format, channelMask);
     }
 
     ALOGW_IF((output == 0), "getOutputForDevice() could not find output for stream %d, "

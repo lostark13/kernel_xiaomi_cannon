@@ -576,7 +576,7 @@
 			qcom,wave-play-rate-us = <4165>;
 			qcom,actuator-type = <1>;
 			qcom,wave-shape = "square";
-			qcom,vmax-mv = <2500>;
+			qcom,vmax-mv = <3000>;
 			qcom,ilim-ma = <800>;
 			qcom,sc-deb-cycles = <8>;
 			qcom,en-brake;

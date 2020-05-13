@@ -1094,7 +1094,7 @@ status_t AudioPolicyManagerCustom::stopSource(const sp<SwAudioOutputDescriptor>&
                         outputDesc->sharesHwModuleWith(desc) &&
                         (newDevices != desc->devices())) {
                         DeviceVector dev = getNewOutputDevices(mOutputs.valueFor(curOutput), false /*fromCache*/);
-                        bool force = prevDevices != dev;
+                        bool force = desc->devices() != dev;
                         uint32_t delayMs;
                         if (dev == prevDevices) {
                             delayMs = 0;

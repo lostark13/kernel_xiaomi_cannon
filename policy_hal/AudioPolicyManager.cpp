@@ -1768,8 +1768,9 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
         // if multiple concurrent offload decode is supported
         // do no check for reuse and also don't close previous output if its offload
         // previous output will be closed during track destruction
-        if (!mApmConfigs->isAudioMultipleOffloadEnable() &&
-                ((*flags & AUDIO_OUTPUT_FLAG_DIRECT) != 0)) {
+        if (!(mApmConfigs->isAudioMultipleOffloadEnable() &&
+                ((*flags & AUDIO_OUTPUT_FLAG_DIRECT) != 0) &&
+                ((*flags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) == 0))) {
             for (size_t i = 0; i < mOutputs.size(); i++) {
                 sp<SwAudioOutputDescriptor> desc = mOutputs.valueAt(i);
                 if (!desc->isDuplicated() && (profile == desc->mProfile)) {

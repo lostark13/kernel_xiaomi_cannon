@@ -1498,7 +1498,7 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
             if (use_primary_out) {
                 *flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_FAST|AUDIO_OUTPUT_FLAG_PRIMARY);
             }
-        } else if ((config->channel_mask == 1) &&
+        } else if ((config->channel_mask == 1 || config->channel_mask == 3) &&
                    (config->sample_rate == 8000 || config->sample_rate == 16000 ||
                     config->sample_rate == 32000 || config->sample_rate == 48000)) {
             //check if VoIP output is not opened already

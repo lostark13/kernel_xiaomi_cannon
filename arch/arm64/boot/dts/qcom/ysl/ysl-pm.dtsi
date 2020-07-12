@@ -232,8 +232,8 @@
 
 /* msm-pmi8940 */
 &spmi_bus {
-             qcom,pmi8940@2 {  
-   			 pmi8940_charger: qcom,qpnp-smbcharger {
+            qcom,pmi8940@2 {  
+   			qpnp_smbcharger: qcom,qpnp-smbcharger {
 			spmi-dev-container;
 			compatible = "qcom,qpnp-smbcharger";
 			#address-cells = <1>;
@@ -267,9 +267,11 @@
 			qcom,jeita-temp-hard-limit = <1>;
 			/delete-property/qcom,fastchg-current-comp;
 			qcom,cool-xiaomi-bat-decidegc = <50>;
-			qcom,override-usb-current;
+			qcom,battery-data = <&mtp_batterydata>;
+	        qcom,chg-led-sw-controls;
+	        qcom,chg-led-support;
 		};
-		pmi8940_fg: qcom,fg {
+		    qcom_fg: qcom,fg {
 			spmi-dev-container;
 			compatible = "qcom,qpnp-fg";
 			#address-cells = <1>;
@@ -286,6 +288,7 @@
 			qcom,pmic-revid = <&pmi8940_revid>;
 			qcom,fg-cutoff-voltage-mv = <3400>;
 			qcom,cycle-counter-en;
+			qcom,battery-data = <&mtp_batterydata>;
 			qcom,fg-cc-cv-threshold-mv = <4390>;
 			qcom,vbat-estimate-diff-mv = <150>;
 			qcom,thermal-coefficients = [C8 86 C1 50 D3 37];/*R=10K B25/85 = 3435*/

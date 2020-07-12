@@ -50,8 +50,4 @@
 	qcom,qpnp-ibb-discharge-resistor = <32>;
 };
 
-&qpnp_smbcharger {
-	qcom,external-typec;
-	qcom,typec-psy-name = "typec";
-};
 

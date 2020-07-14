@@ -2,7 +2,7 @@
  *
  * FocalTech TouchScreen driver.
  *
- * Copyright (c) 2012-2018, Focaltech Ltd. All rights reserved.
+ * Copyright (c) 2010-2017, Focaltech Ltd. All rights reserved.
  * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This software is licensed under the terms of the GNU General Public
@@ -65,19 +65,24 @@
 #include <linux/netdevice.h>
 #include <linux/unistd.h>
 #include <linux/ioctl.h>
-#include <linux/vmalloc.h>
 #include "focaltech_common.h"
 #include "focaltech_flash.h"
-
+#if FTS_PSENSOR_EN
+#include <linux/sensors.h>
+#endif
 /*****************************************************************************
 * Private constant and macro definitions using #define
 *****************************************************************************/
-#define FTS_MAX_POINTS_SUPPORT              10 /* constant value, can't be changed */
-#define FTS_MAX_KEYS                        4
+#define LEN_FLASH_ECC_MAX                   0xFFFE
+
+#define FTS_WORKQUEUE_NAME                  "fts_wq"
+
+#define FTS_MAX_POINTS                      10
 #define FTS_KEY_WIDTH                       50
 #define FTS_ONE_TCH_LEN                     6
+#define POINT_READ_BUF  (3 + FTS_ONE_TCH_LEN * FTS_MAX_POINTS)
 
-#define FTS_MAX_ID                          0x0A
+#define FTS_MAX_ID                          0x0F
 #define FTS_TOUCH_X_H_POS                   3
 #define FTS_TOUCH_X_L_POS                   4
 #define FTS_TOUCH_Y_H_POS                   5
@@ -89,172 +94,121 @@
 #define FTS_TOUCH_ID_POS                    5
 #define FTS_COORDS_ARR_SIZE                 4
 
-#define FTS_TOUCH_DOWN                      0
-#define FTS_TOUCH_UP                        1
-#define FTS_TOUCH_CONTACT                   2
-#define EVENT_DOWN(flag)                    ((FTS_TOUCH_DOWN == flag) || (FTS_TOUCH_CONTACT == flag))
-#define EVENT_UP(flag)                      (FTS_TOUCH_UP == flag)
-#define EVENT_NO_DOWN(data)                 (!data->point_num)
-#define KEY_EN(data)                        (data->pdata->have_key)
-#define TOUCH_IS_KEY(y, key_y)              (y == key_y)
-#define TOUCH_IN_RANGE(val, key_val, half)  ((val > (key_val - half)) && (val < (key_val + half)))
-#define TOUCH_IN_KEY(x, key_x)              TOUCH_IN_RANGE(x, key_x, FTS_KEY_WIDTH)
+#define FTS_TOUCH_DOWN      0
+#define FTS_TOUCH_UP        1
+#define FTS_TOUCH_CONTACT   2
+
+#define FT5446_POWER_LDO    0
+
+#define FTS_SYSFS_ECHO_ON(buf)      ((strnicmp(buf, "1", 1)  == 0) || \
+                                        (strnicmp(buf, "on", 2) == 0))
+#define FTS_SYSFS_ECHO_OFF(buf)     ((strnicmp(buf, "0", 1)  == 0) || \
+                                        (strnicmp(buf, "off", 3) == 0))
+
+#define PINCTRL_STATE_ACTIVE	"pmx_ts_irqrst_active"
+#define PINCTRL_STATE_SUSPEND	"pmx_ts_irqrst_suspend"
+#define PINCTRL_STATE_RELEASE	"pmx_ts_irqrst_release"
 
 /*****************************************************************************
 * Private enumerations, structures and unions using typedef
 *****************************************************************************/
-struct fts_ts_platform_data {
+
+struct fts_ts_platform_data
+{
     u32 irq_gpio;
     u32 irq_gpio_flags;
     u32 reset_gpio;
     u32 reset_gpio_flags;
     bool have_key;
     u32 key_number;
-    u32 keys[FTS_MAX_KEYS];
+    u32 keys[4];
     u32 key_y_coord;
-    u32 key_x_coords[FTS_MAX_KEYS];
+    u32 key_x_coords[4];
     u32 x_max;
     u32 y_max;
     u32 x_min;
     u32 y_min;
     u32 max_touch_number;
+
+
+    #if FT5446_POWER_LDO
+        u32 power_ldo_gpio;
+        u32 power_ldo_gpio_flags;
+    #endif
+
 };
 
-struct ts_event {
-    int x; /*x coordinate */
-    int y; /*y coordinate */
-    int p; /* pressure */
-    int flag; /* touch event flag: 0 -- down; 1-- up; 2 -- contact */
-    int id;   /*touch ID */
-    int area;
+struct ts_event
+{
+    u16 au16_x[FTS_MAX_POINTS]; /*x coordinate */
+    u16 au16_y[FTS_MAX_POINTS]; /*y coordinate */
+    u16 pressure[FTS_MAX_POINTS];
+    u8 au8_touch_event[FTS_MAX_POINTS]; /* touch event: 0 -- down; 1-- up; 2 -- contact */
+    u8 au8_finger_id[FTS_MAX_POINTS];   /*touch ID */
+    u8 area[FTS_MAX_POINTS];
+    u8 touch_point;
+    u8 point_num;
 };
 
-struct fts_ts_data {
+struct fts_ts_data
+{
     struct i2c_client *client;
     struct input_dev *input_dev;
-    struct fts_ts_platform_data *pdata;
-    struct ts_ic_info ic_info;
+    struct ts_event event;
+    const struct fts_ts_platform_data *pdata;
+    #if FTS_PSENSOR_EN
+    struct fts_psensor_platform_data *psensor_pdata;
+    #endif
+    struct work_struct  touch_event_work;
     struct workqueue_struct *ts_workqueue;
-    struct work_struct fwupg_work;
-    struct delayed_work esdcheck_work;
-    struct delayed_work prc_work;
     struct regulator *vdd;
     struct regulator *vcc_i2c;
     spinlock_t irq_lock;
     struct mutex report_mutex;
-    int irq;
+    u16 addr;
     bool suspended;
-    bool fw_loading;
-    bool irq_disabled;
-    bool power_disabled;
-    /* multi-touch */
-    struct ts_event *events;
-    u8 *point_buf;
-    int pnt_buf_size;
+    u8 fw_ver[3];
+    u8 fw_vendor_id;
     int touchs;
-    bool key_down;
-    int touch_point;
-    int point_num;
-    struct proc_dir_entry *proc;
-    u8 proc_opmode;
-    char tp_lockdown_info_temp[FTS_LOCKDOWN_LEN];//add lockdowninfo by likang @20171010
-#if FTS_PINCTRL_EN
-    struct pinctrl *pinctrl;
-    struct pinctrl_state *pins_active;
-    struct pinctrl_state *pins_suspend;
-    struct pinctrl_state *pins_release;
-    char tp_lockdown_info_temp[FTS_LOCKDOWN_LEN];//add lockdowninfo by likang @20171010
+    int irq_disable;
 
-#endif
-#if defined(CONFIG_FB)
+	struct pinctrl *ts_pinctrl;
+	struct pinctrl_state *pinctrl_state_active;
+	struct pinctrl_state *pinctrl_state_suspend;
+	struct pinctrl_state *pinctrl_state_release;
+
+    char tp_lockdown_info_temp[FTS_LOCKDOWN_LEN];
+
+    #if defined(CONFIG_FB)
     struct notifier_block fb_notif;
-	/*add for reslove the issue of resume&suspend time by qujiong begin */
-	struct work_struct fb_notify_work;
-	struct work_struct fb_notify_suspend_work;
-	/*add for reslove the issue of resume&suspend time by qujiong end */
-
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
+    #elif defined(CONFIG_HAS_EARLYSUSPEND)
     struct early_suspend early_suspend;
-#endif
+    #endif
 };
 
+
+#if FTS_PSENSOR_EN
+struct fts_psensor_platform_data
+{
+    struct input_dev *input_psensor_dev;
+    struct sensors_classdev ps_cdev;
+    int tp_psensor_opened;
+    char tp_psensor_data; /* 0 near, 1 far */
+    struct fts_ts_data *data;
+};
+
+int fts_sensor_init(struct fts_ts_data *data);
+int fts_sensor_read_data(struct fts_ts_data *data);
+int fts_sensor_suspend(struct fts_ts_data *data);
+int fts_sensor_resume(struct fts_ts_data *data);
+int fts_sensor_remove(struct fts_ts_data *data);
+#endif
+
 /*****************************************************************************
-* Global variable or extern global variabls/functions
+* Static variables
 *****************************************************************************/
-extern struct fts_ts_data *fts_data;
-
-/* i2c communication*/
-int fts_i2c_write_reg(struct i2c_client *client, u8 regaddr, u8 regvalue);
-int fts_i2c_read_reg(struct i2c_client *client, u8 regaddr, u8 *regvalue);
-int fts_i2c_read(struct i2c_client *client, char *writebuf, int writelen, char *readbuf, int readlen);
-int fts_i2c_write(struct i2c_client *client, char *writebuf, int writelen);
-int fts_i2c_hid2std(struct i2c_client *client);
-int fts_i2c_init(void);
-int fts_i2c_exit(void);
-
-/* Gesture functions */
-#if FTS_GESTURE_EN
-int fts_gesture_init(struct fts_ts_data *ts_data);
-int fts_gesture_exit(struct i2c_client *client);
-void fts_gesture_recovery(struct i2c_client *client);
-int fts_gesture_readdata(struct fts_ts_data *ts_data);
-int fts_gesture_suspend(struct i2c_client *i2c_client);
-int fts_gesture_resume(struct i2c_client *client);
-int fts_select_gesture_mode(struct input_dev *dev,unsigned int type,unsigned int code,int value);
-
-#endif
-
-/* Apk and functions */
-#if FTS_APK_NODE_EN
-int fts_create_apk_debug_channel(struct fts_ts_data *);
-void fts_release_apk_debug_channel(struct fts_ts_data *);
-#endif
-
-/* ADB functions */
-#if FTS_SYSFS_NODE_EN
-int fts_create_sysfs(struct i2c_client *client);
-int fts_remove_sysfs(struct i2c_client *client);
-#endif
-
-/* ESD */
-#if FTS_ESDCHECK_EN
-int fts_esdcheck_init(struct fts_ts_data *ts_data);
-int fts_esdcheck_exit(struct fts_ts_data *ts_data);
-int fts_esdcheck_switch(bool enable);
-int fts_esdcheck_proc_busy(bool proc_debug);
-int fts_esdcheck_set_intr(bool intr);
-int fts_esdcheck_suspend(void);
-int fts_esdcheck_resume(void);
-#endif
-
-/* Production test */
-#if FTS_TEST_EN
-int fts_test_init(struct i2c_client *client);
-int fts_test_exit(struct i2c_client *client);
-#endif
-int init_tp_selftest(struct i2c_client * client);
-
-/* Point Report Check*/
-#if FTS_POINT_REPORT_CHECK_EN
-int fts_point_report_check_init(struct fts_ts_data *ts_data);
-int fts_point_report_check_exit(struct fts_ts_data *ts_data);
-void fts_prc_queue_work(struct fts_ts_data *ts_data);
-#endif
-
-/* FW upgrade */
-int fts_upgrade_bin(struct i2c_client *client, char *fw_name, bool force);
-int fts_fwupg_init(struct fts_ts_data *ts_data);
-int fts_fwupg_exit(struct fts_ts_data *ts_data);
-
-/* Other */
-int fts_reset_proc(int hdelayms);
-int fts_wait_tp_to_valid(struct i2c_client *client);
-void fts_tp_state_recovery(struct i2c_client *client);
-int fts_ex_mode_init(struct i2c_client *client);
-int fts_ex_mode_exit(struct i2c_client *client);
-int fts_ex_mode_recovery(struct i2c_client *client);
-
-void fts_irq_disable(void);
-void fts_irq_enable(void);
+extern struct i2c_client *fts_i2c_client;
+extern struct fts_ts_data *fts_wq_data;
+extern struct input_dev *fts_input_dev;
 
 #endif /* __LINUX_FOCALTECH_CORE_H__ */

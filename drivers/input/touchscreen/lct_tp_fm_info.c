@@ -8,9 +8,11 @@
 #include "lct_tp_fm_info.h"
 
 static struct kobject *msm_tp_device;
-static u16 tp_ver_show;
+static u16 tp_ver_show = 0;
 static char tp_ver_show_str[80] = {0x00};
 static char module_name[80] = {0x00};
+
+int lct_tp_register_flag = 0;
 
 static ssize_t msm_tp_module_id_show(struct device *dev,
         struct device_attribute *attr, char *buf)
@@ -18,8 +20,8 @@ static ssize_t msm_tp_module_id_show(struct device *dev,
     ssize_t rc = 0;
     char tp_version[60] = {0};
 
-    if ((0 == tp_ver_show) && (0 == strlen(tp_ver_show_str)))
-        strcpy(tp_version,"no tp");
+    if((0 == tp_ver_show) && (0 == strlen(tp_ver_show_str)))
+        strcpy(tp_version, "no tp");
     else
     {
         sprintf(tp_version, "[Vendor]%s,%s\n", (strlen(module_name) ? module_name : "Unknown"),
@@ -60,7 +62,7 @@ static ssize_t tp_proc_tp_info_read(struct file *file, char __user *buf, size_t 
 
     page = kzalloc(128, GFP_KERNEL);
 
-    if ((0 == strlen(module_name)) && (0 == tp_ver_show) && (0 == strlen(tp_ver_show_str)))
+    if((0 == strlen(module_name)) && (0 == tp_ver_show) && (0 == strlen(tp_ver_show_str)))
         cnt = sprintf(page, "no tp\n");
     else
     {
@@ -93,7 +95,7 @@ static int tp_fm_creat_proc_entry(void)
     return 0;
 }
 
-int init_tp_fm_info(u16 version_info_num, char *version_info_str, char *name)
+int init_tp_fm_info(u16 version_info_num, char* version_info_str, char *name)
 {
     tp_ver_show = version_info_num;
 
@@ -108,7 +110,7 @@ int init_tp_fm_info(u16 version_info_num, char *version_info_str, char *name)
     return 0;
 }
 
-void update_tp_fm_info(char *version_info_str)
+void update_tp_fm_info(char* version_info_str)
 {
     if (NULL != version_info_str) {
         memset(tp_ver_show_str, 0, sizeof(tp_ver_show_str));

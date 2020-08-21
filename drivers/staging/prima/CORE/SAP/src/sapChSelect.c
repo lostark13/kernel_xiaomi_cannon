@@ -1531,46 +1531,6 @@ void sapComputeSpectWeight( tSapChSelSpectInfo* pSpectInfoParams,
                     /* channelWidth == 2, VHT80*/
                     switch(pSpectCh->channelWidth)
                     {
-                        case eHT_CHANNEL_WIDTH_40MHZ: //HT40
-                            switch( secondaryChannelOffset)
-                            {
-                                tSapSpectChInfo *pExtSpectCh = NULL;
-                                case PHY_DOUBLE_CHANNEL_LOW_PRIMARY: // Above the Primary Channel
-                                    pExtSpectCh = (pSpectCh + 1);
-                                    if( pExtSpectCh != NULL &&
-                                       (pExtSpectCh >= pSpectChStartAddr &&
-                                        pExtSpectCh < pSpectChEndAddr))
-                                    {
-                                        ++pExtSpectCh->bssCount;
-                                        rssi = pSpectCh->rssiAgr + SAP_SUBBAND1_RSSI_EFFECT_PRIMARY;
-                                        // REducing the rssi by -20 and assigning it to Extension channel
-                                        if (IS_RSSI_VALID(pExtSpectCh->rssiAgr, rssi))
-                                        {
-                                            pExtSpectCh->rssiAgr = rssi;
-                                        }
-                                        if(pExtSpectCh->rssiAgr < SOFTAP_MIN_RSSI)
-                                            pExtSpectCh->rssiAgr = SOFTAP_MIN_RSSI;
-                                    }
-                                break;
-
-                                case PHY_DOUBLE_CHANNEL_HIGH_PRIMARY: // Below the Primary channel
-                                    pExtSpectCh = (pSpectCh - 1);
-                                    if( pExtSpectCh != NULL &&
-                                       (pExtSpectCh >= pSpectChStartAddr &&
-                                        pExtSpectCh < pSpectChEndAddr))
-                                    {
-                                        rssi = pSpectCh->rssiAgr + SAP_SUBBAND1_RSSI_EFFECT_PRIMARY;
-                                        if (IS_RSSI_VALID(pExtSpectCh->rssiAgr, rssi))
-                                        {
-                                            pExtSpectCh->rssiAgr = rssi;
-                                        }
-                                        if(pExtSpectCh->rssiAgr < SOFTAP_MIN_RSSI)
-                                            pExtSpectCh->rssiAgr = SOFTAP_MIN_RSSI;
-                                        ++pExtSpectCh->bssCount;
-                                    }
-                                break;
-                            }
-                        break;
                         case eHT_CHANNEL_WIDTH_80MHZ: // VHT80
                             if((centerFreq - channel_id) == 6)
                             {

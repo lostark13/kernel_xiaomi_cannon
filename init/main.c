@@ -535,13 +535,14 @@ asmlinkage __visible void __init start_kernel(void)
 	pr_notice("Kernel command line: %s\n", boot_command_line);
 	 tp = NULL;
      tp = strstr(boot_command_line, "ili9881c");
-     if (tp == NULL)
+     if (tp == NULL) {	 
        tp = strstr(boot_command_line, "androidboot.hwcountry=India");
        if (tp) {
           tpselect = 1;
         } else {
           tpselect = 2;
           }
+	 } 
 	p = NULL;
 	p= strstr(boot_command_line, "androidboot.fpsensor=fpc");
 	if(p) {

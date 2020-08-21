@@ -540,19 +540,21 @@ void hdd_copy_vht_caps(struct ieee80211_vht_cap *hdd_vht_cap,
     temp_vht_cap = roam_vht_cap->supportedChannelWidthSet &
         (IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_MASK >>
             VHT_CAP_SUPP_CHAN_WIDTH_MASK_SHIFT);
-    if (temp_vht_cap)
+    if (temp_vht_cap) {
         if (roam_vht_cap->supportedChannelWidthSet &
             (IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160MHZ >>
-            VHT_CAP_SUPP_CHAN_WIDTH_MASK_SHIFT))
+            VHT_CAP_SUPP_CHAN_WIDTH_MASK_SHIFT)) {
             hdd_vht_cap->vht_cap_info |=
                 temp_vht_cap <<
                 IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
-        if (roam_vht_cap->supportedChannelWidthSet &
+			}	else  if (roam_vht_cap->supportedChannelWidthSet &
             (IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ >>
-            VHT_CAP_SUPP_CHAN_WIDTH_MASK_SHIFT))
+            VHT_CAP_SUPP_CHAN_WIDTH_MASK_SHIFT)) {
             hdd_vht_cap->vht_cap_info |=
             temp_vht_cap <<
             IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ;
+			}
+	      }  			
     if (roam_vht_cap->ldpcCodingCap)
         hdd_vht_cap->vht_cap_info |= IEEE80211_VHT_CAP_RXLDPC;
     if (roam_vht_cap->shortGI80MHz)
@@ -596,10 +598,10 @@ void hdd_copy_vht_caps(struct ieee80211_vht_cap *hdd_vht_cap,
             IEEE80211_VHT_CAP_HTC_VHT;
     temp_vht_cap = roam_vht_cap->maxAMPDULenExp &
             (VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
-    if (temp_vht_cap)
+    if (temp_vht_cap) 
         hdd_vht_cap->vht_cap_info |=
             temp_vht_cap <<
-            VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK_SHIFT;
+            VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK_SHIFT; 
     temp_vht_cap = roam_vht_cap->vhtLinkAdaptCap &
         (IEEE80211_VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB >>
             VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB_SHIFT);

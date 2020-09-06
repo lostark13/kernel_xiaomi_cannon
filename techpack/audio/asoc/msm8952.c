@@ -329,7 +329,7 @@ done:
 int is_ext_spk_gpio_support(struct platform_device *pdev,
 			struct msm_asoc_mach_data *pdata)
 {
-	const char *spk_ext_pa = "qcom,msm-spk-ext-pa";
+	const char *spk_ext_pa = "qcom,spk_ext_pa";
 
 	pr_debug("%s:Enter\n", __func__);
 
@@ -1627,7 +1627,7 @@ static void *def_msm8952_wcd_mbhc_cal(void)
 		return NULL;
 
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(msm8952_wcd_cal)->X) = (Y))
-	S(v_hs_max, 1500);
+	S(v_hs_max, 1600);
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(msm8952_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
@@ -3222,7 +3222,7 @@ static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 //	const char *wsa = "asoc-wsa-codec-names";
 	const char *type = NULL;
 	const char *ext_pa_str = NULL;
-	const char *spk_ext_pa = "qcom,msm-spk-ext-pa";
+	const char *spk_ext_pa = "qcom,spk_ext_pa";
 	int num_strings;
 	int id, i, val;
 	int ret = 0;

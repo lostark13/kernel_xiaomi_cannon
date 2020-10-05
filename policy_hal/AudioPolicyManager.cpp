@@ -1953,17 +1953,40 @@ status_t AudioPolicyManagerCustom::getInputForAttr(const audio_attributes_t *att
         }
     }
 
+    // This workaround prevents Sound Trigger capture streams from
+    // starting on USB headset. Sound Trigger is not supported on
+    // USB headset, so the capture streams should not select USB
+    // headset device. Temporarily remove USB headset devices from
+    // the available devices list while selecting device.
+    bool isSoundTrigger = inputSource == AUDIO_SOURCE_HOTWORD &&
+        mSoundTriggerSessions.indexOfKey(session) >= 0;
+    DeviceVector USBDevices = mAvailableInputDevices.getDevicesFromType(
+                AUDIO_DEVICE_IN_USB_HEADSET);
 
-    return AudioPolicyManager::getInputForAttr(attr,
-                                               input,
-                                               riid,
-                                               session,
-                                               uid,
-                                               config,
-                                               flags,
-                                               selectedDeviceId,
-                                               inputType,
-                                               portId);
+    if (isSoundTrigger) {
+        for (size_t i = 0; i < USBDevices.size(); i++) {
+            mAvailableInputDevices.remove(USBDevices[i]);
+        }
+    }
+
+    status_t status = AudioPolicyManager::getInputForAttr(attr,
+                                                          input,
+                                                          riid,
+                                                          session,
+                                                          uid,
+                                                          config,
+                                                          flags,
+                                                          selectedDeviceId,
+                                                          inputType,
+                                                          portId);
+
+    if (isSoundTrigger) {
+        for (size_t i = 0; i < USBDevices.size(); i++) {
+            mAvailableInputDevices.add(USBDevices[i]);
+        }
+    }
+
+    return status;
 }
 
 uint32_t AudioPolicyManagerCustom::activeNonSoundTriggerInputsCountOnDevices(audio_devices_t devices) const

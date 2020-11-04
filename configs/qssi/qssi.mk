@@ -97,15 +97,15 @@ vendor.audio.hw.aac.encoder=true
 
 ifneq ($(GENERIC_ODM_IMAGE),true)
 # Reduce client buffer size for fast audio output tracks
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_PRODUCT_PROPERTIES += \
 af.fast_track_multiplier=1
 
 #Enable offload audio video playback by default
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_PRODUCT_PROPERTIES += \
 audio.offload.video=true
 
 #Enable music through deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_PRODUCT_PROPERTIES += \
 audio.deep_buffer.media=true
 
 #audio becoming noisy intent broadcast delay
@@ -129,11 +129,11 @@ PRODUCT_PRODUCT_PROPERTIES += \
 audio.sys.offload.pstimeout.secs=3
 
 #Set AudioFlinger client heap size
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_PRODUCT_PROPERTIES += \
 ro.af.client_heap_size_kbyte=7168
 
 #enable deep buffer
-PRODUCT_PROPERTY_OVERRIDES += \
+PRODUCT_PRODUCT_PROPERTIES += \
 media.stagefright.audio.deep=false
 
 endif

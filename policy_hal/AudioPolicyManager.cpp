@@ -1701,7 +1701,8 @@ audio_io_handle_t AudioPolicyManagerCustom::getOutputForDevices(
         // prevent direct pcm for non-music stream blindly if direct pcm already in use
         // for other music stream concurrency is handled after checking direct ouput usage
         // and checking client
-        if (direct_pcm_already_in_use == true && stream != AUDIO_STREAM_MUSIC) {
+        if (direct_pcm_already_in_use == true && stream != AUDIO_STREAM_MUSIC &&
+            !(*flags & AUDIO_OUTPUT_FLAG_VOIP_RX)) {
             ALOGD("disabling offload for non music stream as direct pcm is already in use");
             *flags = (audio_output_flags_t)(AUDIO_OUTPUT_FLAG_NONE);
         }

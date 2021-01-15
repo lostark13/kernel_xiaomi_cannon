@@ -2801,11 +2801,15 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	struct goodix_ts_data *ts;
 	
 	GTP_DEBUG_FUNC();
+#if 0
+	//add different tp detected by likang @20170929
 	if (1 == lct_tp_register_flag) {
 		lct_tp_register_flag = 0;
 		GTP_ERROR("the right tp has been registered. exit probe");
 		return -3;
 	}
+	//add end by likang @20170929
+#endif
 	//do NOT remove these logs
 	config  = kzalloc(GTP_CONFIG_MAX_LENGTH+GTP_ADDR_LENGTH, GFP_KERNEL);
 	if (config == NULL)
@@ -3014,7 +3018,9 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 			dev_err(&ts->client->dev,"failed to select pin to eint_output_low");
 		}
 	}
+#if 0
 	lct_tp_register_flag = 1;//add different tp detected by likang @20170929
+#endif
 
 	return 0;
 }
@@ -3070,7 +3076,9 @@ static int goodix_ts_remove(struct i2c_client *client)
 	devm_kfree(&(client->dev),pindata);
 	input_unregister_device(ts->input_dev);
 	kfree(ts);
+#if 0
 	lct_tp_register_flag = 0; //add different tp detected by likang @20170929
+#endif
 
 	return 0;
 }
@@ -3670,11 +3678,13 @@ Output:
 	Executive Outcomes. 0---succeed.
 *
 *******************************************************/
+#if 0 //remove tpselect
+  extern int tpselect;
+#endif
 
 static int __init goodix_ts_init(void)
 {
 	s32 ret;
-	extern int tpselect;
 	GTP_DEBUG_FUNC();
 	GTP_INFO("GTP driver installing....");
 	goodix_wq = create_singlethread_workqueue("goodix_wq");
@@ -3687,11 +3697,14 @@ static int __init goodix_ts_init(void)
 	INIT_DELAYED_WORK(&gtp_esd_check_work, gtp_esd_check_func);
 	gtp_esd_check_workqueue = create_workqueue("gtp_esd_check");
 #endif
+
+#if 0 //remove tpselect
 	if (tpselect == 1) {
 		lct_tp_register_flag = 1;
 	} else {
 		lct_tp_register_flag = 0;
 	}
+#endif
 	ret = i2c_add_driver(&goodix_ts_driver);
 	return ret;
 }

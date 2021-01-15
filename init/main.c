@@ -492,8 +492,6 @@ static void __init mm_init(void)
 	kaiser_init();
 }
 
-int tpselect=1;
-char *tp=NULL;
 int fpsensor=1;
 asmlinkage __visible void __init start_kernel(void)
 {
@@ -533,16 +531,6 @@ asmlinkage __visible void __init start_kernel(void)
 	page_alloc_init();
 
 	pr_notice("Kernel command line: %s\n", boot_command_line);
-	 tp = NULL;
-     tp = strstr(boot_command_line, "ili9881c");
-     if (tp == NULL) {	 
-       tp = strstr(boot_command_line, "androidboot.hwcountry=India");
-       if (tp) {
-          tpselect = 1;
-        } else {
-          tpselect = 2;
-          }
-	 } 
 	p = NULL;
 	p= strstr(boot_command_line, "androidboot.fpsensor=fpc");
 	if(p) {

@@ -6,4 +6,3 @@
 #include "ysl-mdss.dtsi"
 #include "ysl-mtp.dtsi"
 #include "ysl-camera.dtsi"
-#include "ysl-gpu-oc.dtsi" 

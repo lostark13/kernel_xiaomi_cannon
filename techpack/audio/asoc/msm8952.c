@@ -3228,10 +3228,10 @@ static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct resource *muxsel;
 #if IS_ENABLED(CONFIG_SND_SOC_WSA881X_ANALOG)
-	const char *wsa_prefix = "asoc-wsa-codec-prefixes";
-	const char *wsa_str = NULL;
-	const char *wsa_prefix_str = NULL;
-	char *temp_str = NULL;
+	//const char *wsa_prefix = "asoc-wsa-codec-prefixes";
+	//const char *wsa_str = NULL;
+	//const char *wsa_prefix_str = NULL;
+	//char *temp_str = NULL;
 #endif
 //	char *temp_str = NULL;
 

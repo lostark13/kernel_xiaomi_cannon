@@ -1590,11 +1590,9 @@ static int msm_pcm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 	if (!substream->runtime)
 		return 0;
 
-	mutex_lock(&pdata->lock);
 	if (substream->ref_count <= 0) {
 		pr_err_ratelimited("%s: substream ref_count:%d invalid\n",
 				__func__, substream->ref_count);
-		mutex_unlock(&pdata->lock);
 		return -EINVAL;
 	}
 	prtd = substream->runtime->private_data;
@@ -1628,10 +1626,8 @@ static int msm_pcm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 	if (substream->ref_count <= 0) {
 		pr_err_ratelimited("%s: substream ref_count:%d invalid\n",
 				__func__, substream->ref_count);
-		mutex_unlock(&pdata->lock);
 		return -EINVAL;
 	}
-	mutex_lock(&pdata->lock);
 
 	prtd = substream->runtime->private_data;
 

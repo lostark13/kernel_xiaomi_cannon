@@ -95,7 +95,7 @@ vendor.audio.use.sw.ape.decoder=true
 PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
-ifneq ($(GENERIC_ODM_IMAGE),true)
+ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS),true)
 # Reduce client buffer size for fast audio output tracks
 PRODUCT_PRODUCT_PROPERTIES += \
 af.fast_track_multiplier=1

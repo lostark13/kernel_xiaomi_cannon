@@ -164,15 +164,10 @@
 				"iface_clk", "bus_clk";
 		qcom,ce-opp-freq = <100000000>;
 	};
-	
-	usb3: ssusb@7000000{
-	    qcom,usbin-vadc = <&pmi8940_vadc>;
-		qcom,detect-dpdm-floating;
-		extcon = <&qpnp_smbcharger>;
-	};	
+		
 
-qusb_phy: qusb@79000 {
-   qcom,qusb-phy-init-seq = <0xF8 0x80
+       qusb_phy: qusb@79000 {
+             qcom,qusb-phy-init-seq = <0xF8 0x80
 					0x73 0x84
 					0x83 0x88
 					0xC5 0x8C
